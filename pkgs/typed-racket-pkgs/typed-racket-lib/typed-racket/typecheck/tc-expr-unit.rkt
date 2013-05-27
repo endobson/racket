@@ -24,6 +24,7 @@
 
 (import tc-if^ tc-lambda^ tc-app^ tc-let^ tc-send^ check-subforms^ tc-literal^
         check-class^)
+;(import tc-if^ tc-lambda^ tc-app^ tc-let^ tc-send^ check-subforms^ tc-literal^ tc-expression^)
 (export tc-expr^)
 
 (define-literal-set tc-expr-literals #:for-label
@@ -245,18 +246,7 @@
       ;; application
       [(#%plain-app . _) (tc/app/check form expected)]
       ;; #%expression
-      [((~and exp #%expression) e)
-       #:when (type-inst-property #'exp)
-       (do-inst (tc-expr #'e) (type-inst-property #'exp))]
-      [((~and exp #%expression) e)
-       #:when (type-ascription #'exp)
-       (tc-expr/check #'e (type-ascription #'exp))]
-      [((~and exp #%expression) e)
-       #:when (external-check-property #'exp)
-       ((external-check-property #'exp) #'e)
-       (tc-expr/check #'e expected)]
-      [(#%expression e)
-       (tc-expr/check #'e expected)]
+      [(#%expression _) (tc/expression form expected)]
       ;; syntax
       ;; for now, we ignore the rhs of macros
       [(letrec-syntaxes+values stxs vals . body)
@@ -420,6 +410,7 @@
       ;; top-level variable reference - occurs at top level
       [(#%top . id) (tc-id #'id)]
       ;; #%expression
+<<<<<<< HEAD
       [((~and exp #%expression) e)
        #:when (type-inst-property #'exp)
        (do-inst (tc-expr #'e) (type-inst-property #'exp))]
@@ -427,6 +418,9 @@
        #:when (type-ascription #'exp)
        (tc-expr/check #'e (type-ascription #'exp))]
       [(#%expression e) (tc-expr #'e)]
+=======
+      [(#%expression _) (tc/expression form #f)]
+>>>>>>> Split out tc-expression to a separate file.
       ;; #%variable-reference
       [(#%variable-reference . _)
        (ret -Variable-Reference)]
