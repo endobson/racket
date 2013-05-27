@@ -16,7 +16,6 @@
          get-types
          get-type/infer
          type-ascription
-         remove-ascription
          check-type
          dotted?)
 
@@ -54,9 +53,6 @@
      (add-scoped-tvars stx (parse-literal-alls prop))
      (parse-tc-results prop)]
     [_ #f]))
-
-(define (remove-ascription stx)
-  (type-ascription-property stx #f))
 
 ;; get the type annotation of this identifier, otherwise error
 ;; if #:default is provided, return that instead of error

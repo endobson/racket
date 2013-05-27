@@ -153,17 +153,7 @@
       (int-err "bad form input to tc-expr: ~a" form))
     ;; typecheck form
     (let loop ([form* form] [expected expected] [checked? #f])
-      (cond [(type-ascription form*)
-             =>
-             (lambda (ann)
-               (let* ([r (tc-expr/check/internal form* ann)]
-                      [r* (check-below (check-below r ann) expected)])
-                 ;; add this to the *original* form, since the newer forms aren't really in the program
-                 (add-typeof-expr form r)
-                 ;; around again in case there is an instantiation
-                 ;; remove the ascription so we don't loop infinitely
-                 (loop (remove-ascription form*) r* #t)))]
-            [(external-check-property form*)
+      (cond [(external-check-property form*)
              =>
              (lambda (check)
                (check form*)
@@ -269,6 +259,9 @@
       [((~and exp #%expression) e)
        #:when (type-inst-property #'exp)
        (do-inst (tc-expr #'e) (type-inst-property #'exp))]
+      [((~and exp #%expression) e)
+       #:when (type-ascription #'exp)
+       (tc-expr/check #'e (type-ascription #'exp))]
       [(#%expression e)
        (tc-expr/check #'e expected)]
       ;; syntax
@@ -437,6 +430,9 @@
       [((~and exp #%expression) e)
        #:when (type-inst-property #'exp)
        (do-inst (tc-expr #'e) (type-inst-property #'exp))]
+      [((~and exp #%expression) e)
+       #:when (type-ascription #'exp)
+       (tc-expr/check #'e (type-ascription #'exp))]
       [(#%expression e) (tc-expr #'e)]
       ;; #%variable-reference
       [(#%variable-reference . _)
