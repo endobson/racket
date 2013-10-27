@@ -270,16 +270,6 @@
       #`(c.bindings ...
          ((imag-binding) (unsafe-fl* -1.0 c.imag-binding))))
 
-  (pattern (#%plain-app op:magnitude^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding (generate-temporary "unboxed-real-")
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...)
-      #`(c.bindings ...
-         ((real-binding)
-          (unsafe-flsqrt
-            (unsafe-fl+ (unsafe-fl* c.real-binding c.real-binding)
-                        (unsafe-fl* c.imag-binding c.imag-binding))))))
 
   (pattern (#%plain-app op:exp^ c:unboxed-float-complex-opt-expr)
     #:when (or (subtypeof? this-syntax -FloatComplex)
@@ -293,25 +283,7 @@
          ((real-binding) (unsafe-fl* (unsafe-flcos c.imag-binding) scaling-factor))
          ((imag-binding) (unsafe-fl* (unsafe-flsin c.imag-binding) scaling-factor))))
 
-  (pattern (#%plain-app op:real-part^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding #'c.real-binding
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...) #'(c.bindings ...))
-  (pattern (#%plain-app op:imag-part^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding #'c.imag-binding
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...) #'(c.bindings ...))
-
-  ;; special handling of reals inside complex operations
-  ;; must be after any cases that we are supposed to handle
-  (pattern e:float-arg-expr
-    #:with real-binding (generate-temporary 'unboxed-float-)
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "float-arg-expr in complex ops")]
-    #:with (bindings ...) #`(((real-binding) e.opt)))
-
+  (pattern :unboxed-float-valued-float-complex-opt-expr)
 
   ;; we can eliminate boxing that was introduced by the user
   (pattern (#%plain-app op:make-rectangular^ real:float-arg-expr imag:float-arg-expr)
@@ -351,14 +323,6 @@
     #:with (bindings ...)
       #`(((real-binding) '#,(exact->inexact (real-part n)))
          ((imag-binding) '#,(exact->inexact (imag-part n)))))
-  (pattern (quote n*:number)
-    #:do [(define n (syntax->datum #'n*))]
-    #:when (real? n)
-    #:with real-binding (generate-temporary "unboxed-real-")
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed literal")]
-    #:with (bindings ...)
-      #`(((real-binding) '#,(exact->inexact n))))
 
   (pattern e:float-complex-expr
     #:with e* (generate-temporary)
@@ -383,6 +347,46 @@
     #:with real-binding #f
     #:with imag-binding #f))
 
+;; These optimizations are incorrect and cause bugs because they turn exact 0 into inexact 0
+(define-syntax-class unboxed-float-valued-float-complex-opt-expr
+  (pattern (#%plain-app op:magnitude^ c:unboxed-float-complex-opt-expr)
+    #:with real-binding (generate-temporary "unboxed-real-")
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "unboxed unary float complex")]
+    #:with (bindings ...)
+      #`(c.bindings ...
+         ((real-binding)
+          (unsafe-flsqrt
+            (unsafe-fl+ (unsafe-fl* c.real-binding c.real-binding)
+                        (unsafe-fl* c.imag-binding c.imag-binding))))))
+
+  (pattern (#%plain-app op:real-part^ c:unboxed-float-complex-opt-expr)
+    #:with real-binding #'c.real-binding
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "unboxed unary float complex")]
+    #:with (bindings ...) #'(c.bindings ...))
+  (pattern (#%plain-app op:imag-part^ c:unboxed-float-complex-opt-expr)
+    #:with real-binding #'c.imag-binding
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "unboxed unary float complex")]
+    #:with (bindings ...) #'(c.bindings ...))
+
+  ;; special handling of reals inside complex operations
+  ;; must be after any cases that we are supposed to handle
+  (pattern e:float-arg-expr
+    #:with real-binding (generate-temporary 'unboxed-float-)
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "float-arg-expr in complex ops")]
+    #:with (bindings ...) #`(((real-binding) e.opt)))
+
+  (pattern (quote n*:number)
+    #:do [(define n (syntax->datum #'n*))]
+    #:when (real? n)
+    #:with real-binding (generate-temporary "unboxed-real-")
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "unboxed literal")]
+    #:with (bindings ...)
+      #`(((real-binding) '#,(exact->inexact n)))))
 
 (define-syntax-class float-complex-opt-expr
   #:commit
