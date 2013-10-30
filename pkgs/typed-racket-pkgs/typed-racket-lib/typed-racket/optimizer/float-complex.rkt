@@ -150,8 +150,8 @@
                 "non float complex in complex ops"))]
     #:with (bindings ...)
       #'(((e*) e.opt)
-         ((real-binding) (exact->inexact (real-part e*)))
-         ((imag-binding) (exact->inexact (imag-part e*)))))
+         ((real-binding) (real->double-flonum (real-part e*)))
+         ((imag-binding) (real->double-flonum (imag-part e*)))))
   (pattern e:expr
     #:do [(error (format "non exhaustive pattern match ~a" #'e))]
     #:with (bindings ...) (list)
@@ -330,8 +330,8 @@
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed literal")]
     #:with (bindings ...)
-      #`(((real-binding) '#,(exact->inexact (real-part n)))
-         ((imag-binding) '#,(exact->inexact (imag-part n)))))
+      #`(((real-binding) '#,(real-part n))
+         ((imag-binding) '#,(imag-part n))))
 
   (pattern e:float-complex-expr
     #:with e* (generate-temporary)
