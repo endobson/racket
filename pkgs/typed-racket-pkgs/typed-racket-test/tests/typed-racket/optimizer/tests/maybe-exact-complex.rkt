@@ -1,8 +1,9 @@
 #;#;
 #<<END
-TR opt: maybe-exact-complex.rkt 17:0 (+ 1.0+2.0i 2+4i) -- unboxed binary float complex
-TR opt: maybe-exact-complex.rkt 17:12 2+4i -- non float complex in complex ops
-TR opt: maybe-exact-complex.rkt 17:3 1.0+2.0i -- unboxed literal
+TR missed opt: maybe-exact-complex.rkt 18:12 2+4i -- Non complex value in complex arithmetic
+TR opt: maybe-exact-complex.rkt 18:0 (+ 1.0+2.0i 2+4i) -- unboxed binary float complex
+TR opt: maybe-exact-complex.rkt 18:12 2+4i -- non float complex in complex ops
+TR opt: maybe-exact-complex.rkt 18:3 1.0+2.0i -- unboxed literal
 END
 #<<END
 3.0+6.0i

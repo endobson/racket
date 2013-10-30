@@ -128,12 +128,38 @@
            [(unsafe-fl= #,c 0.0) #,c=0-case]
            [else                 #,general-case])])
 
-
 ;; it's faster to take apart a complex number and use unsafe operations on
 ;; its parts than it is to use generic operations
 ;; we keep the real and imaginary parts unboxed as long as we stay within
 ;; complex operations
 (define-syntax-class unboxed-float-complex-opt-expr
+  #:commit
+  #:attributes (real-binding imag-binding (bindings 1))
+
+  ;; The case when it is a float complex
+  (pattern (~and :float-complex-expr :actual-unboxed-float-complex-opt-expr))
+
+  ;; The following optimization is incorrect and causes bugs because it turns exact numbers into inexact
+  (pattern e:number-expr
+    #:with e* (generate-temporary)
+    #:with (real-binding imag-binding) (binding-names)
+    #:do [(log-missed-complex-expr)
+          (log-unboxing-opt
+            (if (subtypeof? #'e -Flonum)
+                "float in complex ops"
+                "non float complex in complex ops"))]
+    #:with (bindings ...)
+      #'(((e*) e.opt)
+         ((real-binding) (exact->inexact (real-part e*)))
+         ((imag-binding) (exact->inexact (imag-part e*)))))
+  (pattern e:expr
+    #:do [(error (format "non exhaustive pattern match ~a" #'e))]
+    #:with (bindings ...) (list)
+    #:with real-binding #f
+    #:with imag-binding #f))
+
+
+(define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
@@ -329,26 +355,8 @@
     #:with (bindings ...)
       #`(((e*) e.opt)
          ((real-binding) (unsafe-flreal-part e*))
-         ((imag-binding) (unsafe-flimag-part e*))))
+         ((imag-binding) (unsafe-flimag-part e*)))))
 
-  ;; The following optimization is incorrect and causes bugs because it turns exact numbers into inexact
-  (pattern e:number-expr
-    #:with e* (generate-temporary)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt
-            (if (subtypeof? #'e -Flonum)
-                "float in complex ops"
-                "non float complex in complex ops"))]
-
-    #:with (bindings ...)
-      #'(((e*) e.opt)
-         ((real-binding) (exact->inexact (real-part e*)))
-         ((imag-binding) (exact->inexact (imag-part e*)))))
-  (pattern e:expr
-    #:do [(error (format "non exhaustive pattern match ~a" #'e))]
-    #:with (bindings ...) (list)
-    #:with real-binding #f
-    #:with imag-binding #f))
 
 
 (define-syntax-class float-complex-opt-expr
