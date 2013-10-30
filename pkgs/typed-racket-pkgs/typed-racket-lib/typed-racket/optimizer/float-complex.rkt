@@ -30,7 +30,6 @@
 (define-merged-syntax-class projection^ (real-part^ imag-part^))
 
 (define-merged-syntax-class float-complex-op (+^ -^ *^ conjugate^ exp^))
-(define-merged-syntax-class float-complex->float-op (magnitude^ projection^))
 
 (define-syntax-class/specialize float-expr (subtyped-expr -Flonum))
 (define-syntax-class/specialize float-complex-expr (subtyped-expr -FloatComplex))
@@ -349,27 +348,6 @@
 
 ;; These optimizations are incorrect and cause bugs because they turn exact 0 into inexact 0
 (define-syntax-class unboxed-float-valued-float-complex-opt-expr
-  (pattern (#%plain-app op:magnitude^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding (generate-temporary "unboxed-real-")
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...)
-      #`(c.bindings ...
-         ((real-binding)
-          (unsafe-flsqrt
-            (unsafe-fl+ (unsafe-fl* c.real-binding c.real-binding)
-                        (unsafe-fl* c.imag-binding c.imag-binding))))))
-
-  (pattern (#%plain-app op:real-part^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding #'c.real-binding
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...) #'(c.bindings ...))
-  (pattern (#%plain-app op:imag-part^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding #'c.imag-binding
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...) #'(c.bindings ...))
 
   ;; special handling of reals inside complex operations
   ;; must be after any cases that we are supposed to handle
@@ -424,17 +402,6 @@
            ;; required, otherwise syntax/parse is not happy
            #:with opt #'#f)
 
-  ;; we can optimize taking the real of imag part of an unboxed complex
-  ;; hopefully, the compiler can eliminate unused bindings for the other part if it's not used
-  (pattern (#%plain-app op:projection^ c:float-complex-expr)
-    #:with c*:unboxed-float-complex-opt-expr #'c
-    #:do [(log-unboxing-opt "complex accessor elimination")]
-    #:with opt #`(let*-values (c*.bindings ...)
-                   #,(if (or (free-identifier=? #'op #'real-part)
-                             (free-identifier=? #'op #'flreal-part)
-                             (free-identifier=? #'op #'unsafe-flreal-part))
-                         #'c*.real-binding
-                         #'c*.imag-binding)))
 
   (pattern (#%plain-app op:make-polar^ r theta)
     #:when (subtypeof? this-syntax -FloatComplex)
@@ -457,13 +424,32 @@
   #:commit
   #:attributes (opt)
 
-  (pattern (#%plain-app op:float-complex->float-op e:expr ...)
-    #:when (subtypeof? this-syntax -Flonum)
+  ;; we can optimize taking the real of imag part of an unboxed complex
+  ;; hopefully, the compiler can eliminate unused bindings for the other part if it's not used
+  (pattern (#%plain-app _:projection^ _:float-complex-expr)
     #:attr opt
       (delay
         (syntax-parse this-syntax
-          (exp:unboxed-float-complex-opt-expr
-           #'(let*-values (exp.bindings ...) exp.real-binding)))))
+          [(#%plain-app op:projection^ c:unboxed-float-complex-opt-expr)
+           (log-unboxing-opt "complex accessor elimination")
+           #`(let*-values (c.bindings ...)
+               #,(if (or (free-identifier=? #'op #'real-part)
+                         (free-identifier=? #'op #'flreal-part)
+                         (free-identifier=? #'op #'unsafe-flreal-part))
+                     #'c.real-binding
+                     #'c.imag-binding))])))
+
+  (pattern (#%plain-app _:magnitude^ _:float-complex-expr)
+    #:attr opt
+      (delay
+        (syntax-parse this-syntax
+          [(#%plain-app op:magnitude^ c:unboxed-float-complex-opt-expr)
+           (log-unboxing-opt "unboxed unary float complex")
+           #`(let*-values (c.bindings ...)
+               (unsafe-flsqrt
+                 (unsafe-fl+ (unsafe-fl* c.real-binding c.real-binding)
+                             (unsafe-fl* c.imag-binding c.imag-binding))))])))
+
 
   (pattern (#%plain-app op:float-complex-op e:expr ...)
     #:when (subtypeof? this-syntax -FloatComplex)
