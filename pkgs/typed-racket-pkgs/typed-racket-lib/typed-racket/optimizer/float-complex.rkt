@@ -282,7 +282,6 @@
          ((real-binding) (unsafe-fl* (unsafe-flcos c.imag-binding) scaling-factor))
          ((imag-binding) (unsafe-fl* (unsafe-flsin c.imag-binding) scaling-factor))))
 
-  (pattern :unboxed-float-valued-float-complex-opt-expr)
 
   ;; we can eliminate boxing that was introduced by the user
   (pattern (#%plain-app op:make-rectangular^ real:float-arg-expr imag:float-arg-expr)
@@ -331,6 +330,14 @@
       #`(((e*) e.opt)
          ((real-binding) (unsafe-flreal-part e*))
          ((imag-binding) (unsafe-flimag-part e*))))
+
+  ;; The following optimizations are incorrect and cause bugs because they turn exact numbers into inexact
+  (pattern e:float-arg-expr
+    #:with real-binding (generate-temporary 'unboxed-float-)
+    #:with imag-binding #'0.0
+    #:do [(log-unboxing-opt "float-arg-expr in complex ops")]
+    #:with (bindings ...) #`(((real-binding) e.opt)))
+
   (pattern e:opt-expr
     #:when (subtypeof? #'e -Number) ; complex, maybe exact, maybe not
     #:with e* (generate-temporary)
@@ -346,16 +353,6 @@
     #:with real-binding #f
     #:with imag-binding #f))
 
-;; These optimizations are incorrect and cause bugs because they turn exact 0 into inexact 0
-(define-syntax-class unboxed-float-valued-float-complex-opt-expr
-
-  ;; special handling of reals inside complex operations
-  ;; must be after any cases that we are supposed to handle
-  (pattern e:float-arg-expr
-    #:with real-binding (generate-temporary 'unboxed-float-)
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "float-arg-expr in complex ops")]
-    #:with (bindings ...) #`(((real-binding) e.opt))))
 
 (define-syntax-class float-complex-opt-expr
   #:commit
