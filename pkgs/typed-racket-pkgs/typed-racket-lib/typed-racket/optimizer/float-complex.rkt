@@ -165,7 +165,6 @@
 
   ;; We let racket's optimizer handle optimization of 0.0s
   (pattern (#%plain-app op:+^ (~between cs:unboxed-float-complex-opt-expr 2 +inf.0) ...)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
@@ -176,12 +175,10 @@
                 #`((real-binding) #,(fl-sum #'(cs.real-binding ...)))
                 #`((imag-binding) #,(fl-sum #'(cs.imag-binding ...)))))))
   (pattern (#%plain-app op:+^ :unboxed-float-complex-opt-expr)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
 
   (pattern (#%plain-app op:-^ (~between cs:unboxed-float-complex-opt-expr 2 +inf.0) ...)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
@@ -192,7 +189,6 @@
                #`((real-binding) #,(fl-subtract #'(cs.real-binding ...)))
                #`((imag-binding) #,(fl-subtract #'(cs.imag-binding ...)))))))
   (pattern (#%plain-app op:-^ c1:unboxed-float-complex-opt-expr) ; unary -
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
@@ -204,7 +200,6 @@
                         c1:unboxed-float-complex-opt-expr
                         c2:unboxed-float-complex-opt-expr
                         cs:unboxed-float-complex-opt-expr ...)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
@@ -246,14 +241,12 @@
                                                              (unsafe-fl* #,o2 #,(car e2))))))
                                  res))))))))
   (pattern (#%plain-app op:*^ :unboxed-float-complex-opt-expr)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
   (pattern (#%plain-app op:/^
                         c1:unboxed-float-complex-opt-expr
                         c2:unboxed-float-complex-opt-expr
                         cs:unboxed-float-complex-opt-expr ...)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:with reals #'(c1.real-binding c2.real-binding cs.real-binding ...)
     #:with imags #'(c1.imag-binding c2.imag-binding cs.imag-binding ...)
@@ -279,7 +272,6 @@
                         (cons (unbox-one-complex-/ a b (car e1) (car e2) (car rs) (car is))
                               res))))))
   (pattern (#%plain-app op:/^ c1:unboxed-float-complex-opt-expr) ; unary /
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
@@ -288,7 +280,6 @@
                                       #'real-binding #'imag-binding)))
 
   (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
-    #:when (subtypeof? this-syntax -FloatComplex)
     #:with real-binding #'c.real-binding
     #:with imag-binding (generate-temporary "unboxed-imag-")
     #:do [(log-unboxing-opt "unboxed unary float complex")]
@@ -298,8 +289,6 @@
 
 
   (pattern (#%plain-app op:exp^ c:unboxed-float-complex-opt-expr)
-    #:when (or (subtypeof? this-syntax -FloatComplex)
-               (and (log-missed-complex-expr) #f))
     #:with (real-binding imag-binding) (binding-names)
     #:with scaling-factor (generate-temporary "unboxed-scaling-")
     #:do [(log-unboxing-opt "unboxed unary float complex")]
@@ -312,16 +301,12 @@
 
   ;; we can eliminate boxing that was introduced by the user
   (pattern (#%plain-app op:make-rectangular^ real:float-arg-expr imag:float-arg-expr)
-    #:when (or (subtypeof? this-syntax -FloatComplex)
-               (and (log-missed-complex-expr) #f))
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "make-rectangular elimination")]
     #:with (bindings ...)
       #'(((real-binding) real.opt)
          ((imag-binding) imag.opt)))
   (pattern (#%plain-app op:make-polar^ r:float-arg-expr theta:float-arg-expr)
-    #:when (or (subtypeof? this-syntax -FloatComplex)
-               (and (log-missed-complex-expr) #f))
     #:with radius       (generate-temporary)
     #:with angle        (generate-temporary)
     #:with (real-binding imag-binding) (binding-names)
