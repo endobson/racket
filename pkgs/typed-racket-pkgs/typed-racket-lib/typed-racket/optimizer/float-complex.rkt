@@ -355,16 +355,7 @@
     #:with real-binding (generate-temporary 'unboxed-float-)
     #:with imag-binding #'0.0
     #:do [(log-unboxing-opt "float-arg-expr in complex ops")]
-    #:with (bindings ...) #`(((real-binding) e.opt)))
-
-  (pattern (quote n*:number)
-    #:do [(define n (syntax->datum #'n*))]
-    #:when (real? n)
-    #:with real-binding (generate-temporary "unboxed-real-")
-    #:with imag-binding #'0.0
-    #:do [(log-unboxing-opt "unboxed literal")]
-    #:with (bindings ...)
-      #`(((real-binding) '#,(exact->inexact n)))))
+    #:with (bindings ...) #`(((real-binding) e.opt))))
 
 (define-syntax-class float-complex-opt-expr
   #:commit
