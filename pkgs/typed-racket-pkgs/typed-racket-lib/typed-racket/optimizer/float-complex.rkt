@@ -314,9 +314,8 @@
   ;; else, do the unboxing here
 
   ;; we can unbox literals right away
-  (pattern (quote n*:number)
+  (pattern (~and (quote n*:number) :float-complex-expr)
     #:do [(define n (syntax->datum #'n*))]
-    #:when (not (equal? (imag-part n) 0))
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed literal")]
     #:with (bindings ...)
