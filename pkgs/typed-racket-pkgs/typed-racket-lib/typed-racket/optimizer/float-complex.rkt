@@ -6,7 +6,7 @@
          (for-template racket/base racket/math racket/flonum racket/unsafe/ops)
          (utils tc-utils)
          (types numeric-tower subtype type-table utils)
-         (optimizer utils numeric-utils logging float unboxed-tables))
+         (optimizer utils numeric-utils logging float unboxed-tables arithmetic))
 
 (provide float-complex-opt-expr
          float-complex-expr
@@ -32,6 +32,7 @@
 (define-merged-syntax-class float-complex-op (+^ -^ *^ conjugate^ exp^))
 
 (define-syntax-class/specialize number-expr (subtyped-expr -Number))
+(define-syntax-class/specialize real-expr (subtyped-expr -Real))
 (define-syntax-class/specialize float-expr (subtyped-expr -Flonum))
 (define-syntax-class/specialize float-complex-expr (subtyped-expr -FloatComplex))
 
@@ -159,21 +160,45 @@
     #:with imag-binding #f))
 
 
+(define-syntax-class lifted-complex
+  #:attributes ([bindings 1] value)
+  (pattern (~and _:float-complex-expr :actual-unboxed-float-complex-opt-expr)
+    #:attr value (n-complex (n-flonum #'real-binding)
+                            (n-flonum #'imag-binding)))
+  (pattern (~and e:float-expr)
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (n-complex (n-flonum #'e*) (n-zero)))
+  (pattern (~and e:real-expr)
+    #:do [(log-missed-complex-expr)
+          (log-unboxing-opt "non float real in complex ops")]
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (n-complex (n-real #'e*) (n-zero)))
+  (pattern (~and e:number-expr)
+    #:do [(log-missed-complex-expr)
+          (log-unboxing-opt "non float complex in complex ops")]
+    #:with (real-binding imag-binding) (binding-names)
+    #:with (bindings ...)
+           #'([(e*) e.opt]
+              [(real-binding) (real-part e*)]
+              [(imag-binding) (imag-part e*)])
+    #:attr value (n-complex (n-real #'real-binding) (n-real #'imag-binding))))
+
+
+
 (define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
   ;; We let racket's optimizer handle optimization of 0.0s
-  (pattern (#%plain-app op:+^ (~between cs:unboxed-float-complex-opt-expr 2 +inf.0) ...)
+  (pattern (#%plain-app op:+^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed binary float complex")]
+    #:do [(log-unboxing-opt "unboxed float complex addition")]
     #:with (bindings ...)
       #`(cs.bindings ... ...
-         #,@(let ()
-               (define (fl-sum cs) (n-ary->binary #'unsafe-fl+ cs))
+         #,@(let ([value (sum-c (attribute cs.value))])
                (list
-                #`((real-binding) #,(fl-sum #'(cs.real-binding ...)))
-                #`((imag-binding) #,(fl-sum #'(cs.imag-binding ...)))))))
+                #`((real-binding) #,(n-flonum-stx (n-complex-real value)))
+                #`((imag-binding) #,(n-flonum-stx (n-complex-imag value)))))))
   (pattern (#%plain-app op:+^ :unboxed-float-complex-opt-expr)
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 

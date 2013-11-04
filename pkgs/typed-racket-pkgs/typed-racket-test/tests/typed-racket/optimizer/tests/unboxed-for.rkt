@@ -18,7 +18,7 @@ TR opt: unboxed-for.rkt 33:13 i -- unboxed complex variable
 TR opt: unboxed-for.rkt 33:13 i -- unboxed complex variable
 TR opt: unboxed-for.rkt 33:33 (quote (1.0+2.0i 2.0+4.0i)) -- in-list
 TR opt: unboxed-for.rkt 34:11 sum -- leave var unboxed
-TR opt: unboxed-for.rkt 34:6 (+ i sum) -- unboxed binary float complex
+TR opt: unboxed-for.rkt 34:6 (+ i sum) -- unboxed float complex addition
 TR opt: unboxed-for.rkt 34:9 i -- leave var unboxed
 END
 #<<END

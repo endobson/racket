@@ -1,6 +1,6 @@
 #;#;
 #<<END
-TR opt: unboxed-let-functions8.rkt 17:64 (+ x 2.0+4.0i) -- unboxed binary float complex
+TR opt: unboxed-let-functions8.rkt 17:64 (+ x 2.0+4.0i) -- unboxed float complex addition
 TR opt: unboxed-let-functions8.rkt 17:67 x -- unbox float-complex
 TR opt: unboxed-let-functions8.rkt 17:69 2.0+4.0i -- unboxed literal
 END
