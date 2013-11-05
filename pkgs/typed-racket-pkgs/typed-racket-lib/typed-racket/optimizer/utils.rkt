@@ -9,11 +9,12 @@
          "../utils/utils.rkt"
          (utils tc-utils)
          (for-template racket/base)
-         (types type-table utils subtype)
+         (types numeric-tower type-table utils subtype)
          (rep type-rep))
 
 (provide *show-optimized-code*
          subtypeof? isoftype?
+         possibly-contains-zero?
          mk-unsafe-tbl
          n-ary->binary n-ary-comp->binary
          opt-expr optimize
@@ -41,6 +42,12 @@
 (define (isoftype? s t)
   (match (type-of s)
          [(tc-result1: (== t type-equal?)) #t] [_ #f]))
+
+;; Could exact 0 be in s
+(define (possibly-contains-zero? s)
+  (match (type-of s)
+    [(tc-result1: (? (lambda (t) (subtype -Zero t)))) #t]
+    [_ #f]))
 
 ;; generates a table matching safe to unsafe promitives
 (define (mk-unsafe-tbl generic safe-pattern unsafe-pattern)

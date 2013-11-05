@@ -172,13 +172,19 @@
     #:attr value (n-complex (n-flonum #'e*) (n-zero)))
   (pattern (~and e:real-expr)
     #:do [(log-missed-complex-expr)
-          (log-unboxing-opt "non float real in complex ops")]
+          (log-unboxing-opt "non float real in complex ops")
+          (define n-constructor
+            (if (possibly-contains-zero? #'e)
+                n-real
+                n-non-zero-real))]
+    #:with e* (generate-temporary 'real)
     #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (n-complex (n-real #'e*) (n-zero)))
+    #:attr value (n-complex (n-constructor #'e*) (n-zero)))
   (pattern (~and e:number-expr)
     #:do [(log-missed-complex-expr)
           (log-unboxing-opt "non float complex in complex ops")]
     #:with (real-binding imag-binding) (binding-names)
+    #:with e* (generate-temporary 'complex)
     #:with (bindings ...)
            #'([(e*) e.opt]
               [(real-binding) (real-part e*)]
@@ -222,52 +228,15 @@
          [(real-binding) (unsafe-fl* -1.0 c1.real-binding)]
          [(imag-binding) (unsafe-fl* -1.0 c1.imag-binding)]))
 
-  (pattern (#%plain-app op:*^
-                        c1:unboxed-float-complex-opt-expr
-                        c2:unboxed-float-complex-opt-expr
-                        cs:unboxed-float-complex-opt-expr ...)
+  (pattern (#%plain-app op:*^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed binary float complex")]
+    #:do [(log-unboxing-opt "unboxed float complex multiplication")]
+    #:do [(define-values (mult-bindings value) (mult-cs (attribute cs.value)))]
     #:with (bindings ...)
-      #`(c1.bindings ... c2.bindings ... cs.bindings ... ...
-         ;; we want to bind the intermediate results to reuse them
-         ;; the final results are bound to real-binding and imag-binding
-         #,@(let ((lr (syntax->list #'(c1.real-binding c2.real-binding cs.real-binding ...)))
-                  (li (syntax->list #'(c1.imag-binding c2.imag-binding cs.imag-binding ...))))
-              (let loop ([o1 (car lr)]
-                         [o2 (car li)]
-                         [e1 (cdr lr)]
-                         [e2 (cdr li)]
-                         [rs (append (stx-map (lambda (x) (generate-temporary "unboxed-real-"))
-                                              #'(cs.real-binding ...))
-                                     (list #'real-binding))]
-                         [is (append (stx-map (lambda (x) (generate-temporary "unboxed-imag-"))
-                                              #'(cs.imag-binding ...))
-                                     (list #'imag-binding))]
-                         [res '()])
-                (if (null? e1)
-                    (reverse res)
-                    (loop (car rs) (car is) (cdr e1) (cdr e2) (cdr rs) (cdr is)
-                          ;; complex multiplication, imag part, then real part (reverse)
-                          ;; we eliminate operations on the imaginary parts of reals
-                          (let ((o-real? (0.0? o2))
-                                (e-real? (0.0? (car e2))))
-                            (list* #`((#,(car is))
-                                      #,(cond ((and o-real? e-real?) #'0.0)
-                                              (o-real? #`(unsafe-fl* #,o1 #,(car e2)))
-                                              (e-real? #`(unsafe-fl* #,o2 #,(car e1)))
-                                              (else
-                                               #`(unsafe-fl+ (unsafe-fl* #,o2 #,(car e1))
-                                                             (unsafe-fl* #,o1 #,(car e2))))))
-                                   #`((#,(car rs))
-                                      #,(cond ((or o-real? e-real?)
-                                               #`(unsafe-fl* #,o1 #,(car e1)))
-                                              (else
-                                               #`(unsafe-fl- (unsafe-fl* #,o1 #,(car e1))
-                                                             (unsafe-fl* #,o2 #,(car e2))))))
-                                 res))))))))
-  (pattern (#%plain-app op:*^ :unboxed-float-complex-opt-expr)
-    #:do [(log-unboxing-opt "unboxed unary float complex")])
+      #`(cs.bindings ... ...
+         #,@mult-bindings
+         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
+         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
 
   (pattern (#%plain-app op:/^
                         c1:unboxed-float-complex-opt-expr
