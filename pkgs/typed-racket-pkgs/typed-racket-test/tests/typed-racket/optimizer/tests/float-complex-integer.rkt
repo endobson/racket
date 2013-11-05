@@ -1,6 +1,6 @@
 #;#;
 #<<END
-TR missed opt: float-complex-integer.rkt 16:3 (expt 2 100) -- non-complex value in complex arithmetic
+TR missed opt: float-complex-integer.rkt 16:3 (expt 2 100) -- Non float complex value in complex arithmetic
 TR opt: float-complex-integer.rkt 16:0 (+ (expt 2 100) 1.0+2.0i) -- unboxed float complex addition
 TR opt: float-complex-integer.rkt 16:16 1.0+2.0i -- unboxed literal
 TR opt: float-complex-integer.rkt 16:3 (expt 2 100) -- non float real in complex ops

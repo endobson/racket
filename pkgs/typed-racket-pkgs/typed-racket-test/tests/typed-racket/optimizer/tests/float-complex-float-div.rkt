@@ -1,14 +1,14 @@
 #;#;
 #<<END
-TR missed opt: float-complex-float-div.rkt 55:9 1.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 56:18 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 57:9 1.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 58:18 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 59:27 3.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 60:18 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 60:22 3.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 61:13 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-div.rkt 61:9 1.0 -- non-complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 55:9 1.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 56:18 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 57:9 1.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 58:18 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 59:27 3.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 60:18 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 60:22 3.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 61:13 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-div.rkt 61:9 1.0 -- Non float complex value in complex arithmetic
 TR opt: float-complex-float-div.rkt 52:51 (real-part x) -- complex accessor elimination
 TR opt: float-complex-float-div.rkt 52:62 x -- unbox float-complex
 TR opt: float-complex-float-div.rkt 53:51 (imag-part x) -- complex accessor elimination

@@ -46,11 +46,13 @@
   (log-opt opt-label arity-raising-opt-msg))
 (define-syntax-rule (log-missed-complex-expr)
   (log-missed-optimization
-    "non-complex value in complex arithmetic"
+    "Non float complex value in complex arithmetic"
     (string-append
       "This expression has a non-float Complex number type. "
       "The optimizer could optimize it better if it had type Float-Complex.")
     this-syntax))
+
+
 
 ;; If a part is 0.0?
 (define (0.0? stx)
@@ -162,7 +164,7 @@
 
 (define-syntax-class lifted-complex
   #:attributes ([bindings 1] value)
-  (pattern (~and _:float-complex-expr :actual-unboxed-float-complex-opt-expr)
+  (pattern (~and _:float-complex-expr ~! :actual-unboxed-float-complex-opt-expr)
     #:attr value (n-complex (n-flonum #'real-binding)
                             (n-flonum #'imag-binding)))
   (pattern (~and e:float-expr)
@@ -203,16 +205,15 @@
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
 
-  (pattern (#%plain-app op:-^ (~between cs:unboxed-float-complex-opt-expr 2 +inf.0) ...)
+  (pattern (#%plain-app op:-^ c:lifted-complex cs:lifted-complex ...+)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
-      #`(cs.bindings ... ...
-         #,@(let ()
-              (define (fl-subtract cs) (n-ary->binary #'unsafe-fl- cs))
-              (list
-               #`((real-binding) #,(fl-subtract #'(cs.real-binding ...)))
-               #`((imag-binding) #,(fl-subtract #'(cs.imag-binding ...)))))))
+      #`(c.bindings ... cs.bindings ... ...
+         #,@(let ([value (sub-cs (attribute c.value) (attribute cs.value))])
+               (list
+                #`((real-binding) #,(n-flonum-stx (n-complex-real value)))
+                #`((imag-binding) #,(n-flonum-stx (n-complex-imag value)))))))
   (pattern (#%plain-app op:-^ c1:unboxed-float-complex-opt-expr) ; unary -
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed unary float complex")]

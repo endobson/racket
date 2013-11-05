@@ -1,12 +1,12 @@
 #;#;
 #<<END
-TR missed opt: float-complex-float-mul.rkt 46:3 1.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 47:12 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 48:3 1.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 49:12 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 50:21 3.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 51:12 2.0 -- non-complex value in complex arithmetic
-TR missed opt: float-complex-float-mul.rkt 51:16 3.0 -- non-complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 46:3 1.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 47:12 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 48:3 1.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 49:12 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 50:21 3.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 51:12 2.0 -- Non float complex value in complex arithmetic
+TR missed opt: float-complex-float-mul.rkt 51:16 3.0 -- Non float complex value in complex arithmetic
 TR opt: float-complex-float-mul.rkt 46:0 (* 1.0 2.0+4.0i) -- unboxed binary float complex
 TR opt: float-complex-float-mul.rkt 46:3 1.0 -- float in complex ops
 TR opt: float-complex-float-mul.rkt 46:7 2.0+4.0i -- unboxed literal

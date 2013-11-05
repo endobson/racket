@@ -1,6 +1,6 @@
 #;#;
 #<<END
-TR missed opt: unboxed-let-functions7.rkt 31:17 (car l) -- non-complex value in complex arithmetic
+TR missed opt: unboxed-let-functions7.rkt 31:17 (car l) -- Non float complex value in complex arithmetic
 TR opt: unboxed-let-functions7.rkt 27:0 (let: loop : Float-Complex ((z : Float-Complex 0.0+0.0i) (l : (Listof Integer) (quote (1 2 3)))) (if (null? l) z (loop (+ z (car l)) (cdr l)))) -- unboxed call site
 TR opt: unboxed-let-functions7.rkt 27:31 z -- unboxed var -> table
 TR opt: unboxed-let-functions7.rkt 27:51 0.0+0.0i -- unboxed literal
