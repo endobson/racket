@@ -15,6 +15,16 @@
 (struct n-non-zero-real (stx) #:transparent)
 (struct n-flonum (stx) #:transparent)
 
+(define-match-expander c:
+  (syntax-parser
+    [(_ real imag)
+     #'(n-complex real imag)]))
+
+(define-match-expander 0:
+  (syntax-parser
+    [(_)
+     #'(n-zero)]))
+
 (define-match-expander n-real:
   (syntax-parser
     [(_ expr)
@@ -26,72 +36,72 @@
      #'(or (n-flonum expr)
            (n-non-zero-real (app (lambda (stx) #`(real->double-flonum #,stx)) expr)))]))
 
+(define-match-expander n-real/flonum:
+  (syntax-parser
+    [(_ expr)
+     #'(or (n-real expr) (n-non-zero-real expr) (n-flonum expr))]))
+
+
 
 
 ;; TODO figure out if pre-conversion in flonum+real cases is ok
 
 (define (add-r v1 v2)
   (match* (v1 v2)
-    [((n-zero) _) v2]
-    [(_ (n-zero)) v1]
-    [((n-flonum s1) (n-flonum s2))
+    [((0:) _) v2]
+    [(_ (0:)) v1]
+    [((n-flonum s1) (n-flonum: s2))
      (n-flonum #`(unsafe-fl+ #,s1 #,s2))]
-    [((n-flonum s1) (n-real: s2))
+    [((n-flonum: s1) (n-flonum s2))
+     (n-flonum #`(unsafe-fl+ #,s1 #,s2))]
+    [((n-flonum s1) (n-real s2))
      (n-flonum #`(+ #,s1 #,s2))]
-    [((n-real: s1) (n-flonum s2))
+    [((n-real s1) (n-flonum s2))
      (n-flonum #`(+ #,s1 #,s2))]
-    [((n-real: s1) (n-real: s2))
+    [((n-real/flonum: s1) (n-real/flonum: s2))
      (n-real #`(+ #,s1 #,s2))]))
 
 (define (sub-r v1 v2)
   (match* (v1 v2)
-    [(_ (n-zero)) v1]
-    [((n-zero) (n-flonum s2))
+    [(_ (0:)) v1]
+    [((0:) (n-flonum s2))
      (n-flonum #`(unsafe-fl* -1.0 #,s2))]
-    [((n-zero) (n-real: s2))
+    [((0:) (n-real: s2))
      (n-real #`(- #,s2))]
-    [((n-flonum s1) (n-flonum s2))
+    [((n-flonum s1) (n-flonum: s2))
      (n-flonum #`(unsafe-fl- #,s1 #,s2))]
-    [((n-flonum s1) (n-real: s2))
+    [((n-flonum: s1) (n-flonum s2))
+     (n-flonum #`(unsafe-fl- #,s1 #,s2))]
+    [((n-flonum s1) (n-real s2))
      (n-flonum #`(- #,s1 #,s2))]
-    [((n-real: s1) (n-flonum s2))
+    [((n-real s1) (n-flonum s2))
      (n-flonum #`(- #,s1 #,s2))]
-    [((n-real: s1) (n-real: s2))
+    [((n-real/flonum: s1) (n-real/flonum: s2))
      (n-real #`(- #,s1 #,s2))]))
 
 (define (mult-r v1 v2)
   (match* (v1 v2)
-    [((n-zero) _) (n-zero)]
-    [(_ (n-zero)) (n-zero)]
-    [((n-flonum s1) (n-flonum s2))
+    [((0:) _) (n-zero)]
+    [(_ (0:)) (n-zero)]
+    [((n-flonum s1) (n-flonum: s2))
      (n-flonum #`(unsafe-fl* #,s1 #,s2))]
-    [((n-flonum s1) (n-non-zero-real s2))
-     (n-flonum #`(* #,s1 #,s2))]
-    [((n-non-zero-real s1) (n-flonum s2))
-     (n-flonum #`(* #,s1 #,s2))]
-    [((n-flonum s1) (n-real s2))
-     (n-real #`(* #,s1 #,s2))]
-    [((n-real s1) (n-flonum s2))
-     (n-real #`(* #,s1 #,s2))]
+    [((n-flonum: s1) (n-flonum s2))
+     (n-flonum #`(unsafe-fl* #,s1 #,s2))]
     [((n-non-zero-real s1) (n-non-zero-real s2))
      (n-non-zero-real #`(* #,s1 #,s2))]
-    [((n-real: s1) (n-real: s2))
+    [((n-real/flonum: s1) (n-real/flonum: s2))
      (n-real #`(* #,s1 #,s2))]))
 
 (define (div-r v1 v2)
   (match* (v1 v2)
-    [((n-zero) _) (n-zero)]
-    [((n-flonum s1) (n-flonum s2))
+    [((0:) _) (n-zero)]
+    [((n-flonum s1) (n-flonum: s2))
      (n-flonum #`(unsafe-fl/ #,s1 #,s2))]
-    [((n-flonum s1) (n-non-zero-real s2))
-     (n-flonum #`(/ #,s1 #,s2))]
-    [((n-non-zero-real s1) (n-flonum s2))
-     (n-flonum #`(/ #,s1 #,s2))]
+    [((n-flonum: s1) (n-flonum s2))
+     (n-flonum #`(unsafe-fl/ #,s1 #,s2))]
     [((n-non-zero-real s1) (n-non-zero-real s2))
      (n-non-zero-real #`(/ #,s1 #,s2))]
-    [((n-real s1) (n-flonum s2))
-     (n-real #`(/ #,s1 #,s2))]
-    [((n-real s1) (n-non-zero-real s2))
+    [((n-real/flonum: s1) (n-real/flonum: s2))
      (n-real #`(/ #,s1 #,s2))]))
 
 (define (negate-r v)
@@ -101,43 +111,40 @@
 
 (define (add-c v1 v2)
   (match* (v1 v2)
-    [((n-complex r1 i1)
-      (n-complex r2 i2))
+    [((c: r1 i1) (c: r2 i2))
      (n-complex
        (add-r r1 r2)
        (add-r i1 i2))]))
 
 (define (sub-c v1 v2)
   (match* (v1 v2)
-    [((n-complex r1 i1)
-      (n-complex r2 i2))
+    [((c: r1 i1)
+      (c: r2 i2))
      (n-complex
        (sub-r r1 r2)
        (sub-r i1 i2))]))
 
+
 (define (save r)
   (define binding (generate-temporary))
+  (define constructor
+    (match r
+      [(n-zero) n-zero]
+      [(n-flonum _) n-flonum]
+      [(n-non-zero-real _) n-non-zero-real]
+      [(n-real _) n-real]))
+
   (match r
     [(n-zero)
      (values empty (n-zero))]
-    [(n-flonum stx)
+    [(n-real/flonum: stx)
      (if (identifier? stx)
          (values empty r)
-         (values (list #`[(#,binding) #,stx]) (n-flonum binding)))]
-    [(n-non-zero-real stx)
-     (if (identifier? stx)
-         (values empty r)
-         (values (list #`[(#,binding) #,stx]) (n-non-zero-real binding)))]
-    [(n-real stx)
-     (if (identifier? stx)
-         (values empty r)
-         (values (list #`[(#,binding) #,stx]) (n-real binding)))]))
-
+         (values (list #`[(#,binding) #,stx]) (constructor binding)))]))
 
 (define (mult-c v1 v2)
   (match* (v1 v2)
-    [((n-complex r1 i1)
-      (n-complex r2 i2))
+    [((c: r1 i1) (c: r2 i2))
      (define-values (r1-binds r1*) (save r1))
      (define-values (i1-binds i1*) (save i1))
      (define-values (r2-binds r2*) (save r2))
@@ -151,7 +158,8 @@
                (mult-r i2* r1*))))]))
 
 
-;; a+bi / c+di, names for real and imag parts of result -> one let-values binding clause
+;; a+bi / c+di -> syntax 
+;; a,b,c,d are floats (!= exact 0)
 (define (complex-complex-/ a b c d)
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
@@ -184,7 +192,7 @@
           [(unsafe-fl= #,c 0.0) #,c=0-case]
           [else                 #,general-case]))
 
-;; a+bi / c+di, names for real and imag parts of result -> one let-values binding clause
+;; a+bi / c+di -> syntax
 ;; b = exact 0
 ;; a,c,d are floats (!= exact 0)
 (define (float-complex-/ a c d)
@@ -215,7 +223,7 @@
           [(unsafe-fl= #,c 0.0) #,c=0-case]
           [else                 #,general-case]))
 
-;; a+bi / c+di, names for real and imag parts of result -> one let-values binding clause
+;; a+bi / c+di -> syntax
 ;; d = exact 0
 ;; a,b,c are floats (!= exact 0)
 (define (complex-float-/ a b c)
@@ -226,8 +234,6 @@
 
 
 (define (div-c v1 v2)
-
-
   (define (wrap v)
     (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
     (values
@@ -235,17 +241,13 @@
       (n-complex (n-flonum #'real) (n-flonum #'imag))))
 
     (match* (v1 v2)
-      [((n-complex r1 (n-zero))
-        (n-complex r2 (n-zero)))
+      [((c: r1 (0:)) (c: r2 (0:)))
        (values empty (n-complex (div-r r1 r2) (n-zero)))]
-      [((n-complex (n-flonum: r1) (n-zero))
-        (n-complex (n-flonum r2) (n-flonum i2)))
+      [((c: (n-flonum: r1) (0:)) (c: (n-flonum r2) (n-flonum i2)))
        (wrap (float-complex-/ r1 r2 i2))]
-      [((n-complex (n-flonum r1) (n-flonum i1))
-        (n-complex (n-flonum: r2) (n-zero)))
+      [((c: (n-flonum r1) (n-flonum i1)) (c: (n-flonum: r2) (0:)))
        (wrap (complex-float-/ r1 i1 r2))]
-      [((n-complex (n-flonum r1) (n-flonum i1))
-        (n-complex (n-flonum r2) (n-flonum i2)))
+      [((c: (n-flonum r1) (n-flonum i1)) (c: (n-flonum r2) (n-flonum i2)))
        (wrap (complex-complex-/ r1 i1 r2 i2))]))
 
 
