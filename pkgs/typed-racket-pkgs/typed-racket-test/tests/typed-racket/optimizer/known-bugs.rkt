@@ -57,7 +57,7 @@
   (test-suite "Known bugs"
 
     ;; Arguments are converted to inexact too early
-    (bad-opt (* (make-rectangular -inf.0 1) (* 1 1)))
+    (good-opt (* (make-rectangular -inf.0 1) (* 1 1)))
     (bad-opt (/ -inf.0-inf.0i 8))
     (good-opt (- (* -1 1 +nan.0) 1.0+1.0i))
     (good-opt (- (* (/ 6 11) (/ 1.2345678f0 123456.7f0)) (make-rectangular 0.0 0.3)))
@@ -84,17 +84,17 @@
     (good-opt (+ (exp 1.7976931348623151e+308) 0.0+0.0i))
 
     ;; Multiplication of multiple args should keep exact semantics for exact args
-    (bad-opt (* (expt 10 500) (expt 10 -500) 1.0+1.0i))
+    (good-opt (* (expt 10 500) (expt 10 -500) 1.0+1.0i))
 
     ;; Addition of multiple args should keep exact semantics for exact args
-    (bad-opt (+ (expt 10 501) (expt -10 501) 1.0+1.0i))
+    (good-opt (+ (expt 10 501) (expt -10 501) 1.0+1.0i))
 
     ;; Magnitude should not overflow unless necessary
     (bad-opt (magnitude 3.0e300+4.0e300i))
 
     ;; Negation should correctly compute sign of 0.0
     (good-opt (- 0.0+0.0i))
-    (bad-opt (- 0+0i 0.0+0.0i))
+    (good-opt (- 0+0i 0.0+0.0i))
 
     ;; Conjugate should correctly compute sign of 0.0
     (good-opt (conjugate 0.0+0.0i))))
