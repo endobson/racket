@@ -58,27 +58,27 @@
 
     ;; Arguments are converted to inexact too early
     (good-opt (* (make-rectangular -inf.0 1) (* 1 1)))
-    (bad-opt (/ -inf.0-inf.0i 8))
+    (good-opt (/ -inf.0-inf.0i 8))
     (good-opt (- (* -1 1 +nan.0) 1.0+1.0i))
     (good-opt (- (* (/ 6 11) (/ 1.2345678f0 123456.7f0)) (make-rectangular 0.0 0.3)))
-    (bad-opt (/ 1.0 0.0+0.0i))
+    (good-opt (/ 1.0 0.0+0.0i))
     (good-opt (+ 0.0+0.0i (* 1 1 +inf.0)))
 
     ;; Unary division has bad underflow
     (good-opt (/ (make-rectangular 1e+100 1e-300)))
     (good-opt (/ 0.5+1.7e+308i))
-    (bad-opt (/ 1 (make-rectangular 1e+100 1e-300)))
-    (bad-opt (/ 1 0.5+1.7e+308i))
+    (good-opt (/ 1 (make-rectangular 1e+100 1e-300)))
+    (good-opt (/ 1 0.5+1.7e+308i))
 
     ;; Division of complex 0 should only make part of the result nan
     (good-opt (/ 0.0+0.0i))
-    (bad-opt (/ 1 0.0+0.0i))
+    (good-opt (/ 1 0.0+0.0i))
 
     ;; Division of complex infinity should only make part of the result nan
     (good-opt (/ (make-rectangular 1.0 +inf.0)))
     (good-opt (/ (make-rectangular +inf.0 1.0)))
-    (bad-opt (/ 1 (make-rectangular 1.0 +inf.0)))
-    (bad-opt (/ 1 (make-rectangular +inf.0 1.0)))
+    (good-opt (/ 1 (make-rectangular 1.0 +inf.0)))
+    (good-opt (/ 1 (make-rectangular +inf.0 1.0)))
 
     ;; Exp of large real should have 0 imaginary component
     (good-opt (+ (exp 1.7976931348623151e+308) 0.0+0.0i))

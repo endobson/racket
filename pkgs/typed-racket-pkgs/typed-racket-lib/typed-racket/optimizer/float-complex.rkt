@@ -54,82 +54,6 @@
 
 
 
-;; If a part is 0.0?
-(define (0.0? stx)
-  (equal? (syntax->datum stx) 0.0))
-
-
-;; a+bi / c+di, names for real and imag parts of result -> one let-values binding clause
-(define (unbox-one-complex-/ a b c d res-real res-imag)
-  (define both-real? (and (0.0? b) (0.0? d)))
-  ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
-  (define d=0-case
-    #`(values (unsafe-fl+ (unsafe-fl/ #,a #,c)
-                          (unsafe-fl* #,d #,b))
-              (unsafe-fl- (unsafe-fl/ #,b #,c)
-                          (unsafe-fl* #,d #,a))))
-  (define c=0-case
-    #`(values (unsafe-fl+ (unsafe-fl/ #,b #,d)
-                          (unsafe-fl* #,c #,a))
-              (unsafe-fl- (unsafe-fl* #,c #,b)
-                          (unsafe-fl/ #,a #,d))))
-
-  (define general-case
-    #`(let* ([cm    (unsafe-flabs #,c)]
-             [dm    (unsafe-flabs #,d)]
-             [swap? (unsafe-fl< cm dm)]
-             [a     (if swap? #,b #,a)]
-             [b     (if swap? #,a #,b)]
-             [c     (if swap? #,d #,c)]
-             [d     (if swap? #,c #,d)]
-             [r     (unsafe-fl/ c d)]
-             [den   (unsafe-fl+ d (unsafe-fl* c r))]
-             [i     (if swap?
-                        (unsafe-fl/ (unsafe-fl- a (unsafe-fl* b r)) den)
-                        (unsafe-fl/ (unsafe-fl- (unsafe-fl* b r) a) den))])
-        (values (unsafe-fl/ (unsafe-fl+ b (unsafe-fl* a r)) den)
-                i)))
-  (cond [both-real?
-         #`[(#,res-real #,res-imag)
-            (values (unsafe-fl/ #,a #,c)
-                    0.0)]] ; currently not propagated
-        [else
-         #`[(#,res-real #,res-imag)
-            (cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-                  [(unsafe-fl= #,c 0.0) #,c=0-case]
-                  [else                 #,general-case])]]))
-
-;; a+bi / c+di, names for real and imag parts of result -> one let-values binding clause
-;; b = exact 0
-;; a,c,d are floats (!= exact 0)
-(define (unbox-one-float-complex-/ a c d res-real res-imag)
-  ;; TODO: In what cases is the negation in the d=0 case useful
-  (define d=0-case
-    #`(values (unsafe-fl/ #,a #,c)
-              (unsafe-fl* -1.0 (unsafe-fl* #,d #,a))))
-  (define c=0-case
-    #`(values (unsafe-fl* #,c #,a)
-              (unsafe-fl* -1.0 (unsafe-fl/ #,a #,d))))
-
-
-  (define general-case
-    #`(let* ([cm    (unsafe-flabs #,c)]
-             [dm    (unsafe-flabs #,d)]
-             [swap? (unsafe-fl< cm dm)]
-             [a     #,a]
-             [c     (if swap? #,d #,c)]
-             [d     (if swap? #,c #,d)]
-             [r     (unsafe-fl/ c d)]
-             [den   (unsafe-fl+ d (unsafe-fl* c r))]
-             [i     (if swap?
-                        (unsafe-fl/ (unsafe-fl* -1.0 (unsafe-fl* a r)) den)
-                        (unsafe-fl/ (unsafe-fl* -1.0 a) den))]
-             [j     (if swap? a (unsafe-fl* a r))])
-          (values (unsafe-fl/ j den) i)))
-  #`[(#,res-real #,res-imag)
-     (cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-           [(unsafe-fl= #,c 0.0) #,c=0-case]
-           [else                 #,general-case])])
 
 ;; it's faster to take apart a complex number and use unsafe operations on
 ;; its parts than it is to use generic operations
@@ -168,6 +92,7 @@
     #:attr value (n-complex (n-flonum #'real-binding)
                             (n-flonum #'imag-binding)))
   (pattern (~and e:float-expr)
+    #:with e* (generate-temporary)
     #:with (bindings ...) #'([(e*) e.opt])
     #:attr value (n-complex (n-flonum #'e*) (n-zero)))
   (pattern (~and e:real-expr)
@@ -238,41 +163,41 @@
          [(real-binding) #,(n-flonum-stx (n-complex-real value))]
          [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
 
-  (pattern (#%plain-app op:/^
-                        c1:unboxed-float-complex-opt-expr
-                        c2:unboxed-float-complex-opt-expr
-                        cs:unboxed-float-complex-opt-expr ...)
+  (pattern (#%plain-app op:/^ c:lifted-complex cs:lifted-complex  ...+)
     #:with (real-binding imag-binding) (binding-names)
-    #:with reals #'(c1.real-binding c2.real-binding cs.real-binding ...)
-    #:with imags #'(c1.imag-binding c2.imag-binding cs.imag-binding ...)
+    #:do [(define-values (div-bindings value) (div-cs (attribute c.value) (attribute cs.value)))]
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
-      #`(c1.bindings ... c2.bindings ... cs.bindings ... ...
-         ;; we want to bind the intermediate results to reuse them
-         ;; the final results are bound to real-binding and imag-binding
-         #,@(let loop ([a  (stx-car #'reals)]
-                       [b  (stx-car #'imags)]
-                       [e1 (cdr (syntax->list #'reals))]
-                       [e2 (cdr (syntax->list #'imags))]
-                       [rs (append (stx-map (lambda (x) (generate-temporary "unboxed-real-"))
-                                            #'(cs.real-binding ...))
-                                   (list #'real-binding))]
-                       [is (append (stx-map (lambda (x) (generate-temporary "unboxed-imag-"))
-                                            #'(cs.imag-binding ...))
-                                   (list #'imag-binding))]
-                       [res '()])
-              (if (null? e1)
-                  (reverse res)
-                  (loop (car rs) (car is) (cdr e1) (cdr e2) (cdr rs) (cdr is)
-                        (cons (unbox-one-complex-/ a b (car e1) (car e2) (car rs) (car is))
-                              res))))))
-  (pattern (#%plain-app op:/^ c1:unboxed-float-complex-opt-expr) ; unary /
+      #`(c.bindings ... cs.bindings ... ...
+         #,@div-bindings
+         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
+         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
+
+  (pattern (#%plain-app op:/^ c:lifted-complex) ; unary /
     #:with (real-binding imag-binding) (binding-names)
+    #:do [(define-values (div-bindings value)
+            (div-c (n-complex (n-flonum #'1.0) (n-zero)) (attribute c.value)))]
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
-      #`(c1.bindings ...
-         #,(unbox-one-float-complex-/ #'1.0 #'c1.real-binding #'c1.imag-binding
-                                      #'real-binding #'imag-binding)))
+      #`(c.bindings ...
+         #,@div-bindings
+         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
+         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
+
+  (pattern (#%plain-app op:/^ (~between cs:opt-expr 2 +inf.0) ...)
+    #:with (real-binding imag-binding) (binding-names)
+    #:with value (generate-temporary 'div-result)
+    #:do [(log-missed-optimization
+            "Non float complex values in complex division"
+            (string-append
+              "This expression has a FloatComplex type but complicated arguments thus cannot "
+              "be promoted to unboxed arithmetic.")
+            this-syntax)]
+    #:with (bindings ...)
+      #`([(value) (/ cs.opt ...)]
+         [(real-binding) (unsafe-flreal-part value)]
+         [(imag-binding) (unsafe-flimag-part value)]))
+
 
   (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
     #:with real-binding #'c.real-binding
