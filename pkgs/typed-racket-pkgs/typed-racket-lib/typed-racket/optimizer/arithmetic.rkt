@@ -39,6 +39,7 @@
 
 (define (safe-stx v)
   (match v
+    [(0:) #'0]
     [(real/flonum: stx) stx]))
 
 (begin-for-syntax
@@ -83,7 +84,7 @@
       #:with safe safe-id
       #:with f #'(lambda (v1 v2) (c.constr #`(safe #,(safe-stx v1) #,(safe-stx v2))))))
 
-        
+
   (define-syntax-class (real-op-clause safe-id unsafe-id)
     #:attributes (match-clause)
     (pattern [term1:op-arg term2:op-arg sym:symmetry (~datum =>) (~var res (result safe-id unsafe-id))]
@@ -92,14 +93,14 @@
       #:with match-clause
         #'[(and (list a1 a2) (list-pat term1.pattern term2.pattern))
            (res.f a1 a2)])))
-      
+
 
 (define-syntax define-real-op
   (syntax-parser
     [(_ name:id #:safe safe-op:id #:unsafe unsafe-op:id
         (~var clauses (real-op-clause #'safe-op #'unsafe-op)) ...)
      #'(define name (match-lambda* clauses.match-clause ...))]))
-     
+
 
 
 
@@ -164,6 +165,14 @@
 (define (values-r . vs)
   #`(values #,@(map safe-stx vs)))
 
+(define (zero?-r v)
+  (match v
+    [(0:) #'#t]
+    [(flonum stx) #`(unsafe-fl= 0.0 #,stx)]
+    [_ #`(zero? #,(safe-stx v))]))
+
+
+
 
 
 
@@ -214,10 +223,10 @@
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
 (define (complex-complex-/ a-r b-r c-r d-r)
-  (define a (unsafe-stx a-r))
-  (define b (unsafe-stx b-r))
-  (define c (unsafe-stx c-r))
-  (define d (unsafe-stx d-r))
+  (define a (safe-stx a-r))
+  (define b (safe-stx b-r))
+  (define c (safe-stx c-r))
+  (define d (safe-stx d-r))
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
     (values-r (add-r (div-r a-r c-r) (mult-r d-r b-r))
@@ -226,66 +235,26 @@
     (values-r (add-r (div-r b-r d-r) (mult-r c-r a-r))
               (sub-r (mult-r c-r b-r) (div-r a-r d-r))))
 
-  (define general-case
-    #`(let* ([swap? #,(<-r (abs-r c-r) (abs-r d-r))]
-             [a     (if swap? #,b #,a)]
-             [b     (if swap? #,a #,b)]
-             [c     (if swap? #,d #,c)]
-             [d     (if swap? #,c #,d)]
-             [r     (unsafe-fl/ c d)]
-             [den   (unsafe-fl+ d (unsafe-fl* c r))]
-             [i     (if swap?
-                        (unsafe-fl/ (unsafe-fl- a (unsafe-fl* b r)) den)
-                        (unsafe-fl/ (unsafe-fl- (unsafe-fl* b r) a) den))])
-        (values (unsafe-fl/ (unsafe-fl+ b (unsafe-fl* a r)) den)
-                i)))
-  (wrap
-    #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-            [(unsafe-fl= #,c 0.0) #,c=0-case]
-            [else                 #,general-case])))
-
-;; a+bi / c+di -> syntax
-;; b = exact 0
-;; a,c,d are floats (!= exact 0)
-(define (float-complex-/ a-r c-r d-r)
-  (define a (unsafe-stx a-r))
-  (define c (unsafe-stx c-r))
-  (define d (unsafe-stx d-r))
-  ;; TODO: In what cases is the negation in the d=0 case useful
-  (define d=0-case
-    (values-r (div-r a-r c-r)
-              (negate-r (mult-r d-r a-r))))
-  (define c=0-case
-    (values-r (mult-r c-r a-r)
-              (negate-r (div-r a-r d-r))))
-  (define/with-syntax swap? (generate-temporary 'swap?))
-
-
+  (define (general-body a b c d)
+    (let* ([r (div-r c d)]
+           [den (add-r d (mult-r c r))]
+           [i (div-r (sub-r (mult-r b r) a) den)])
+      (values-r (div-r (add-r b (mult-r a r)) den) i)))
+  (define (general-body-swapped a b c d)
+    (let* ([r (div-r d c)]
+           [den (add-r c (mult-r d r))]
+           [i (div-r (sub-r b (mult-r a r)) den)])
+      (values-r (div-r (add-r a (mult-r b r)) den) i)))
 
   (define general-case
-    #`(let* ([swap? #,(<-r (abs-r c-r) (abs-r d-r))]
-             [a     #,a]
-             [c     (if swap? #,d #,c)]
-             [d     (if swap? #,c #,d)]
-             [r     (unsafe-fl/ c d)]
-             [den   (unsafe-fl+ d (unsafe-fl* c r))]
-             [i     (if swap?
-                        (unsafe-fl/ (unsafe-fl* -1.0 (unsafe-fl* a r)) den)
-                        (unsafe-fl/ (unsafe-fl* -1.0 a) den))]
-             [j     (if swap? a (unsafe-fl* a r))])
-          (values (unsafe-fl/ j den) i)))
-  (wrap
-    #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-            [(unsafe-fl= #,c 0.0) #,c=0-case]
-            [else                 #,general-case])))
+    #`(if #,(<-r (abs-r c-r) (abs-r d-r))
+          #,(general-body-swapped a-r b-r c-r d-r)
+          #,(general-body a-r b-r c-r d-r)))
 
-;; a+bi / c+di -> syntax
-;; d = exact 0
-;; a,b,c are inexact (!= exact 0)
-(define (complex-float-/ a b c)
-  (define-values (c-binds c*) (save c))
-  (values c-binds
-          (complex (div-r a c*) (div-r b c*))))
+  (wrap
+    #`(cond [#,(zero?-r d-r) #,d=0-case]
+            [#,(zero?-r c-r) #,c=0-case]
+            [else            #,general-case])))
 
 (define (wrap v)
   (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
@@ -299,9 +268,9 @@
       [((c r1 (0:)) (c r2 (0:)))
        (values empty (c (div-r r1 r2) 0-))]
       [((c (or (? flonum? r1) (? non-zero-real? r1)) (0:)) (c (? flonum? r2) (? flonum? i2)))
-       (float-complex-/ r1 r2 i2)]
+       (complex-complex-/ r1 0- r2 i2)]
       [((c (? flonum? r1) (? flonum? i1)) (c (or (? flonum? r2) (? non-zero-real? r2)) (0:)))
-       (complex-float-/ r1 i1 r2)]
+       (complex-complex-/ r1 i1 r2 0-)]
       ;; Buggy on single flonum reals
       [((c (? flonum? r1) (? flonum? i1))
         (c (or (? flonum? r2) (? non-zero-real? r2))
