@@ -106,14 +106,18 @@
     #:attr value (c (constr #'e*) 0-))
   (pattern (~and e:number-expr)
     #:do [(log-missed-complex-expr)
-          (log-unboxing-opt "non float complex in complex ops")]
+          (log-unboxing-opt "non float complex in complex ops")
+          (define constr
+            (if (subtypeof? #'e -InexactComplex)
+                non-zero-real
+                real))]
     #:with (real-binding imag-binding) (binding-names)
     #:with e* (generate-temporary 'complex)
     #:with (bindings ...)
            #'([(e*) e.opt]
               [(real-binding) (real-part e*)]
               [(imag-binding) (imag-part e*)])
-    #:attr value (c (real #'real-binding) (real #'imag-binding))))
+    #:attr value (c (constr #'real-binding) (constr #'imag-binding))))
 
 
 

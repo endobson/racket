@@ -269,7 +269,7 @@
     (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
     (values
       (list #`[(real imag) #,v])
-      (c(flonum #'real) (flonum #'imag))))
+      (c (flonum #'real) (flonum #'imag))))
 
     (match* (v1 v2)
       [((c r1 (0:)) (c r2 (0:)))
@@ -278,7 +278,10 @@
        (wrap (float-complex-/ r1 r2 i2))]
       [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (0:)))
        (wrap (complex-float-/ r1 i1 r2))]
-      [((c (flonum r1) (flonum i1)) (c (flonum r2) (flonum i2)))
+      ;; Buggy on single flonum reals
+      [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (flonum/coerce: i2)))
+       (wrap (complex-complex-/ r1 i1 r2 i2))]
+      [((c (flonum/coerce: r1) (flonum/coerce: i1)) (c (flonum r2) (flonum i2)))
        (wrap (complex-complex-/ r1 i1 r2 i2))]))
 
 (define (unary-div-c v)
