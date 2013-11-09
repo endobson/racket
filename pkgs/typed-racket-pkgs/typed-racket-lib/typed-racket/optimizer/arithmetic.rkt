@@ -16,6 +16,7 @@
 (struct flonum (stx) #:transparent)
 
 (define 0- (zero))
+(define complex c)
 
 (define-match-expander 0:
   (syntax-parser [(_) #'(zero)]))
@@ -143,6 +144,25 @@
     [(real s)
      (real #`(- #,s))]))
 
+(define (abs-r v)
+  (match v
+    [(zero) (zero)]
+    [(flonum s)
+     (flonum #`(unsafe-flabs #,s))]
+    [(non-zero-real s)
+     (non-zero-real #`(abs #,s))]
+    [(real s)
+     (real #`(abs #,s))]))
+
+(define (<-r v1 v2)
+  (match* (v1 v2)
+    [((flonum s1) (flonum s2))
+     #`(unsafe-fl< #,s1 #,s2)]
+    [(_ _)
+     #`(< #,(safe-stx v1) #,(safe-stx v2))]))
+
+
+
 
 
 (define (add-c v1 v2)
@@ -226,20 +246,22 @@
 ;; a+bi / c+di -> syntax
 ;; b = exact 0
 ;; a,c,d are floats (!= exact 0)
-(define (float-complex-/ a c d)
+(define (float-complex-/ a-r c-r d-r)
+  (define a (unsafe-stx a-r))
+  (define c (unsafe-stx c-r))
+  (define d (unsafe-stx d-r))
   ;; TODO: In what cases is the negation in the d=0 case useful
   (define d=0-case
-    #`(values (unsafe-fl/ #,a #,c)
-              (unsafe-fl* -1.0 (unsafe-fl* #,d #,a))))
+    #`(values #,(flonum-stx (div-r a-r c-r))
+              #,(flonum-stx (negate-r (mult-r d-r a-r)))))
   (define c=0-case
-    #`(values (unsafe-fl* #,c #,a)
-              (unsafe-fl* -1.0 (unsafe-fl/ #,a #,d))))
+    #`(values #,(flonum-stx (mult-r c-r a-r))
+              #,(flonum-stx (negate-r (div-r a-r d-r)))))
+
 
 
   (define general-case
-    #`(let* ([cm    (unsafe-flabs #,c)]
-             [dm    (unsafe-flabs #,d)]
-             [swap? (unsafe-fl< cm dm)]
+    #`(let* ([swap? #,(<-r (abs-r c-r) (abs-r d-r))]
              [a     #,a]
              [c     (if swap? #,d #,c)]
              [d     (if swap? #,c #,d)]
@@ -250,34 +272,35 @@
                         (unsafe-fl/ (unsafe-fl* -1.0 a) den))]
              [j     (if swap? a (unsafe-fl* a r))])
           (values (unsafe-fl/ j den) i)))
-  #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-          [(unsafe-fl= #,c 0.0) #,c=0-case]
-          [else                 #,general-case]))
+  (wrap
+    #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
+            [(unsafe-fl= #,c 0.0) #,c=0-case]
+            [else                 #,general-case])))
 
 ;; a+bi / c+di -> syntax
 ;; d = exact 0
-;; a,b,c are floats (!= exact 0)
+;; a,b,c are inexact (!= exact 0)
 (define (complex-float-/ a b c)
-  #`(let ([a #,a]
-          [b #,b]
-          [c #,c])
-        (values (unsafe-fl/ a c) (unsafe-fl/ b c))))
+  (define-values (c-binds c*) (save c))
+  (values c-binds
+          (complex (div-r a c*) (div-r b c*))))
+
+(define (wrap v)
+  (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
+  (values
+    (list #`[(real imag) #,v])
+    (c (flonum #'real) (flonum #'imag))))
 
 
 (define (div-c v1 v2)
-  (define (wrap v)
-    (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
-    (values
-      (list #`[(real imag) #,v])
-      (c (flonum #'real) (flonum #'imag))))
 
     (match* (v1 v2)
       [((c r1 (0:)) (c r2 (0:)))
        (values empty (c (div-r r1 r2) 0-))]
-      [((c (flonum/coerce: r1) (0:)) (c (flonum r2) (flonum i2)))
-       (wrap (float-complex-/ r1 r2 i2))]
-      [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (0:)))
-       (wrap (complex-float-/ r1 i1 r2))]
+      [((c (or (? flonum? r1) (? non-zero-real? r1)) (0:)) (c (? flonum? r2) (? flonum? i2)))
+       (float-complex-/ r1 r2 i2)]
+      [((c (? flonum? r1) (? flonum? i1)) (c (or (? flonum? r2) (? non-zero-real? r2)) (0:)))
+       (complex-float-/ r1 i1 r2)]
       ;; Buggy on single flonum reals
       [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (flonum/coerce: i2)))
        (wrap (complex-complex-/ r1 i1 r2 i2))]
