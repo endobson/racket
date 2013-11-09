@@ -5,7 +5,7 @@
   racket/list
   racket/syntax
   racket/match
-  (for-syntax racket/base syntax/parse)
+  (for-syntax racket/base syntax/parse unstable/syntax racket/set)
   (for-template racket/base racket/unsafe/ops))
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
@@ -41,71 +41,119 @@
     [(_ expr)
      #'(or (n-real expr) (n-non-zero-real expr) (n-flonum expr))]))
 
+(define (unsafe-stx v)
+  (match v
+    [(n-flonum stx) stx]
+    [(n-non-zero-real stx) #`(real->double-flonum #,stx)]))
+
+(define (safe-stx v)
+  (match v
+    [(n-flonum stx) stx]
+    [(n-non-zero-real stx) stx]
+    [(n-real stx) stx]))
+
+(begin-for-syntax
+
+  ;; Possible numbers
+  (define-syntax-class number-type
+    (pattern (~datum zero)
+      #:with pattern #'(n-zero))
+    (pattern (~datum flonum)
+      #:with pattern #'(n-flonum _))
+    (pattern (~datum real-not-zero)
+      #:with pattern #'(n-non-zero-real _))
+    (pattern (~datum real)
+      #:with pattern #'(n-real _)))
+
+  (define-syntax-class op-arg
+    (pattern (t:number-type ...+)
+      #:with pattern #'(or t.pattern ...))
+    (pattern ((~datum any))
+      #:with pattern #'_)
+    (pattern pattern:id))
+
+  (define-splicing-syntax-class symmetry
+    (pattern (~seq) #:attr sym? #f)
+    (pattern #:sym #:attr sym? #t)
+    (pattern #:asym #:attr sym? #f))
+
+
+  (define-splicing-syntax-class constructor
+    #:attributes (constr)
+    (pattern (~seq) #:with constr #'n-real)
+    (pattern (~seq #:constructor constr:id)))
+
+  (define-splicing-syntax-class (result safe-id unsafe-id)
+    #:attributes (f)
+    (pattern (~seq e:expr)
+      #:with f #'(lambda (v1 v2) e))
+    (pattern (~seq #:unsafe)
+      #:with unsafe unsafe-id
+      #:with f #'(lambda (v1 v2) (n-flonum #`(unsafe #,(unsafe-stx v1) #,(unsafe-stx v2) ))))
+    (pattern (~seq #:safe c:constructor)
+      #:with safe safe-id
+      #:with f #'(lambda (v1 v2) (c.constr #`(safe #,(safe-stx v1) #,(safe-stx v2))))))
+
+        
+  (define-syntax-class (real-op-clause safe-id unsafe-id)
+    #:attributes (match-clause)
+    (pattern [term1:op-arg term2:op-arg sym:symmetry (~datum =>) (~var res (result safe-id unsafe-id))]
+      #:with list-pat (if (attribute sym.sym?) #'list-no-order #'list)
+      #:with (a1 a2) (generate-temporaries '(arg arg))
+      #:with match-clause
+        #'[(and (list a1 a2) (list-pat term1.pattern term2.pattern))
+           (res.f a1 a2)])))
+      
+
+(define-syntax define-real-op
+  (syntax-parser
+    [(_ name:id #:safe safe-op:id #:unsafe unsafe-op:id
+        (~var clauses (real-op-clause #'safe-op #'unsafe-op)) ...)
+     #'(define name (match-lambda* clauses.match-clause ...))]))
+     
 
 
 
-;; TODO figure out if pre-conversion in flonum+real cases is ok
+;; zero, flonum, real, real-not-zero
+(define-real-op add-r
+  #:safe + #:unsafe unsafe-fl+
+  [(zero) x => x]
+  [x (zero) => x]
+  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(any) (any) #:sym => #:safe #:constructor n-flonum])
 
-(define (add-r v1 v2)
-  (match* (v1 v2)
-    [((0:) _) v2]
-    [(_ (0:)) v1]
-    [((n-flonum s1) (n-flonum: s2))
-     (n-flonum #`(unsafe-fl+ #,s1 #,s2))]
-    [((n-flonum: s1) (n-flonum s2))
-     (n-flonum #`(unsafe-fl+ #,s1 #,s2))]
-    [((n-flonum s1) (n-real s2))
-     (n-flonum #`(+ #,s1 #,s2))]
-    [((n-real s1) (n-flonum s2))
-     (n-flonum #`(+ #,s1 #,s2))]
-    [((n-real/flonum: s1) (n-real/flonum: s2))
-     (n-real #`(+ #,s1 #,s2))]))
+(define-real-op sub-r
+  #:safe - #:unsafe unsafe-fl-
+  [(zero) x => (negate-r x)]
+  [x (zero) => x]
+  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(any) (any) #:sym => #:safe #:constructor n-flonum])
 
-(define (sub-r v1 v2)
-  (match* (v1 v2)
-    [(_ (0:)) v1]
-    [((0:) (n-flonum s2))
-     (n-flonum #`(unsafe-fl* -1.0 #,s2))]
-    [((0:) (n-real: s2))
-     (n-real #`(- #,s2))]
-    [((n-flonum s1) (n-flonum: s2))
-     (n-flonum #`(unsafe-fl- #,s1 #,s2))]
-    [((n-flonum: s1) (n-flonum s2))
-     (n-flonum #`(unsafe-fl- #,s1 #,s2))]
-    [((n-flonum s1) (n-real s2))
-     (n-flonum #`(- #,s1 #,s2))]
-    [((n-real s1) (n-flonum s2))
-     (n-flonum #`(- #,s1 #,s2))]
-    [((n-real/flonum: s1) (n-real/flonum: s2))
-     (n-real #`(- #,s1 #,s2))]))
+(define-real-op mult-r
+  #:safe * #:unsafe unsafe-fl*
+  [(zero) x => (n-zero)]
+  [x (zero) => (n-zero)]
+  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor n-non-zero-real]
+  [(any) (any) #:sym => #:safe])
 
-(define (mult-r v1 v2)
-  (match* (v1 v2)
-    [((0:) _) (n-zero)]
-    [(_ (0:)) (n-zero)]
-    [((n-flonum s1) (n-flonum: s2))
-     (n-flonum #`(unsafe-fl* #,s1 #,s2))]
-    [((n-flonum: s1) (n-flonum s2))
-     (n-flonum #`(unsafe-fl* #,s1 #,s2))]
-    [((n-non-zero-real s1) (n-non-zero-real s2))
-     (n-non-zero-real #`(* #,s1 #,s2))]
-    [((n-real/flonum: s1) (n-real/flonum: s2))
-     (n-real #`(* #,s1 #,s2))]))
+(define-real-op div-r
+  #:safe / #:unsafe unsafe-fl/
+  [(zero) x => (n-zero)]
+  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor n-non-zero-real]
+  [(any) (any) #:sym => #:safe])
 
-(define (div-r v1 v2)
-  (match* (v1 v2)
-    [((0:) _) (n-zero)]
-    [((n-flonum s1) (n-flonum: s2))
-     (n-flonum #`(unsafe-fl/ #,s1 #,s2))]
-    [((n-flonum: s1) (n-flonum s2))
-     (n-flonum #`(unsafe-fl/ #,s1 #,s2))]
-    [((n-non-zero-real s1) (n-non-zero-real s2))
-     (n-non-zero-real #`(/ #,s1 #,s2))]
-    [((n-real/flonum: s1) (n-real/flonum: s2))
-     (n-real #`(/ #,s1 #,s2))]))
 
 (define (negate-r v)
-  (sub-r (n-zero) v))
+  (match v
+    [(0:) (n-zero)]
+    [(n-flonum s)
+     (n-flonum #`(unsafe-fl* -1.0 #,s))]
+    [(n-non-zero-real s)
+     (n-non-zero-real #`(- #,s))]
+    [(n-real s)
+     (n-real #`(- #,s))]))
 
 
 

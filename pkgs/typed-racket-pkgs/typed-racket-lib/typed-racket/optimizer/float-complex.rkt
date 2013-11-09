@@ -343,11 +343,24 @@
         (syntax-parse this-syntax
           [(#%plain-app op:magnitude^ c:unboxed-float-complex-opt-expr)
            (log-unboxing-opt "unboxed unary float complex")
+           (define/with-syntax (abs-real abs-imag small large div)
+             (generate-temporaries '(abs-real abs-imag small large div)))
            #`(let*-values (c.bindings ...)
-               (unsafe-flsqrt
-                 (unsafe-fl+ (unsafe-fl* c.real-binding c.real-binding)
-                             (unsafe-fl* c.imag-binding c.imag-binding))))])))
-
+               (let*-values ([(abs-real) (unsafe-flabs c.real-binding)]
+                             [(abs-imag) (unsafe-flabs c.imag-binding)]
+                             [(small large)
+                              (if (unsafe-fl< abs-imag abs-real)
+                                  (values abs-imag abs-real)
+                                  (values abs-real abs-imag))])
+                 (cond
+                   [(unsafe-fl= 0.0 small) large]
+                   [(eq? +inf.0 large)
+                    (if (eq? +nan.0 small)
+                        +nan.0
+                        +inf.0)]
+                   [else
+                     (let ([div (unsafe-fl/ small large)])
+                       (unsafe-fl* large (unsafe-flsqrt (unsafe-fl+ 1.0 (unsafe-fl* div div)))))])))])))
 
   (pattern (#%plain-app op:float-complex-op e:expr ...)
     #:when (subtypeof? this-syntax -FloatComplex)
