@@ -161,6 +161,8 @@
     [(_ _)
      #`(< #,(safe-stx v1) #,(safe-stx v2))]))
 
+(define (values-r . vs)
+  #`(values #,@(map safe-stx vs)))
 
 
 
@@ -211,23 +213,21 @@
 
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
-(define (complex-complex-/ a b c d)
+(define (complex-complex-/ a-r b-r c-r d-r)
+  (define a (unsafe-stx a-r))
+  (define b (unsafe-stx b-r))
+  (define c (unsafe-stx c-r))
+  (define d (unsafe-stx d-r))
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
-    #`(values (unsafe-fl+ (unsafe-fl/ #,a #,c)
-                          (unsafe-fl* #,d #,b))
-              (unsafe-fl- (unsafe-fl/ #,b #,c)
-                          (unsafe-fl* #,d #,a))))
+    (values-r (add-r (div-r a-r c-r) (mult-r d-r b-r))
+              (sub-r (div-r b-r c-r) (mult-r d-r a-r))))
   (define c=0-case
-    #`(values (unsafe-fl+ (unsafe-fl/ #,b #,d)
-                          (unsafe-fl* #,c #,a))
-              (unsafe-fl- (unsafe-fl* #,c #,b)
-                          (unsafe-fl/ #,a #,d))))
+    (values-r (add-r (div-r b-r d-r) (mult-r c-r a-r))
+              (sub-r (mult-r c-r b-r) (div-r a-r d-r))))
 
   (define general-case
-    #`(let* ([cm    (unsafe-flabs #,c)]
-             [dm    (unsafe-flabs #,d)]
-             [swap? (unsafe-fl< cm dm)]
+    #`(let* ([swap? #,(<-r (abs-r c-r) (abs-r d-r))]
              [a     (if swap? #,b #,a)]
              [b     (if swap? #,a #,b)]
              [c     (if swap? #,d #,c)]
@@ -239,9 +239,10 @@
                         (unsafe-fl/ (unsafe-fl- (unsafe-fl* b r) a) den))])
         (values (unsafe-fl/ (unsafe-fl+ b (unsafe-fl* a r)) den)
                 i)))
-  #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
-          [(unsafe-fl= #,c 0.0) #,c=0-case]
-          [else                 #,general-case]))
+  (wrap
+    #`(cond [(unsafe-fl= #,d 0.0) #,d=0-case]
+            [(unsafe-fl= #,c 0.0) #,c=0-case]
+            [else                 #,general-case])))
 
 ;; a+bi / c+di -> syntax
 ;; b = exact 0
@@ -252,11 +253,12 @@
   (define d (unsafe-stx d-r))
   ;; TODO: In what cases is the negation in the d=0 case useful
   (define d=0-case
-    #`(values #,(flonum-stx (div-r a-r c-r))
-              #,(flonum-stx (negate-r (mult-r d-r a-r)))))
+    (values-r (div-r a-r c-r)
+              (negate-r (mult-r d-r a-r))))
   (define c=0-case
-    #`(values #,(flonum-stx (mult-r c-r a-r))
-              #,(flonum-stx (negate-r (div-r a-r d-r)))))
+    (values-r (mult-r c-r a-r)
+              (negate-r (div-r a-r d-r))))
+  (define/with-syntax swap? (generate-temporary 'swap?))
 
 
 
@@ -293,7 +295,6 @@
 
 
 (define (div-c v1 v2)
-
     (match* (v1 v2)
       [((c r1 (0:)) (c r2 (0:)))
        (values empty (c (div-r r1 r2) 0-))]
@@ -302,10 +303,14 @@
       [((c (? flonum? r1) (? flonum? i1)) (c (or (? flonum? r2) (? non-zero-real? r2)) (0:)))
        (complex-float-/ r1 i1 r2)]
       ;; Buggy on single flonum reals
-      [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (flonum/coerce: i2)))
-       (wrap (complex-complex-/ r1 i1 r2 i2))]
-      [((c (flonum/coerce: r1) (flonum/coerce: i1)) (c (flonum r2) (flonum i2)))
-       (wrap (complex-complex-/ r1 i1 r2 i2))]))
+      [((c (? flonum? r1) (? flonum? i1))
+        (c (or (? flonum? r2) (? non-zero-real? r2))
+           (or (? flonum? i2) (? non-zero-real? i2))))
+       (complex-complex-/ r1 i1 r2 i2)]
+      [((c (or (? flonum? r1) (? non-zero-real? r1))
+           (or (? flonum? i1) (? non-zero-real? i1)))
+        (c (? flonum? r2) (? flonum? i2)))
+       (complex-complex-/ r1 i1 r2 i2)]))
 
 (define (unary-div-c v)
   (div-c (c (non-zero-real #'1.0) 0-) v))
