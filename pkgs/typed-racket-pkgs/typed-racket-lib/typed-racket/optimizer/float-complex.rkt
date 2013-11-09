@@ -89,22 +89,21 @@
 (define-syntax-class lifted-complex
   #:attributes ([bindings 1] value)
   (pattern (~and _:float-complex-expr ~! :actual-unboxed-float-complex-opt-expr)
-    #:attr value (n-complex (n-flonum #'real-binding)
-                            (n-flonum #'imag-binding)))
+    #:attr value (c (flonum #'real-binding) (flonum #'imag-binding)))
   (pattern (~and e:float-expr)
     #:with e* (generate-temporary)
     #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (n-complex (n-flonum #'e*) (n-zero)))
+    #:attr value (c (flonum #'e*) 0-))
   (pattern (~and e:real-expr)
     #:do [(log-missed-complex-expr)
           (log-unboxing-opt "non float real in complex ops")
-          (define n-constructor
+          (define constr
             (if (possibly-contains-zero? #'e)
-                n-real
-                n-non-zero-real))]
+                real
+                non-zero-real))]
     #:with e* (generate-temporary 'real)
     #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (n-complex (n-constructor #'e*) (n-zero)))
+    #:attr value (c (constr #'e*) 0-))
   (pattern (~and e:number-expr)
     #:do [(log-missed-complex-expr)
           (log-unboxing-opt "non float complex in complex ops")]
@@ -114,7 +113,7 @@
            #'([(e*) e.opt]
               [(real-binding) (real-part e*)]
               [(imag-binding) (imag-part e*)])
-    #:attr value (n-complex (n-real #'real-binding) (n-real #'imag-binding))))
+    #:attr value (c (real #'real-binding) (real #'imag-binding))))
 
 
 
@@ -130,8 +129,8 @@
       #`(cs.bindings ... ...
          #,@(let ([value (sum-c (attribute cs.value))])
                (list
-                #`((real-binding) #,(n-flonum-stx (n-complex-real value)))
-                #`((imag-binding) #,(n-flonum-stx (n-complex-imag value)))))))
+                #`((real-binding) #,(flonum-stx (c-real value)))
+                #`((imag-binding) #,(flonum-stx (c-imag value)))))))
   (pattern (#%plain-app op:+^ :unboxed-float-complex-opt-expr)
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
@@ -143,8 +142,8 @@
       #`(c.bindings ... cs.bindings ... ...
          #,@(let ([value (sub-cs (attribute c.value) (attribute cs.value))])
                (list
-                #`((real-binding) #,(n-flonum-stx (n-complex-real value)))
-                #`((imag-binding) #,(n-flonum-stx (n-complex-imag value)))))))
+                #`((real-binding) #,(flonum-stx (c-real value)))
+                #`((imag-binding) #,(flonum-stx (c-imag value)))))))
   (pattern (#%plain-app op:-^ c1:unboxed-float-complex-opt-expr) ; unary -
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed unary float complex")]
@@ -160,8 +159,8 @@
     #:with (bindings ...)
       #`(cs.bindings ... ...
          #,@mult-bindings
-         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
-         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
+         [(real-binding) #,(flonum-stx (c-real value))]
+         [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ c:lifted-complex cs:lifted-complex  ...+)
     #:with (real-binding imag-binding) (binding-names)
@@ -170,19 +169,18 @@
     #:with (bindings ...)
       #`(c.bindings ... cs.bindings ... ...
          #,@div-bindings
-         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
-         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
+         [(real-binding) #,(flonum-stx (c-real value))]
+         [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ c:lifted-complex) ; unary /
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(define-values (div-bindings value)
-            (div-c (n-complex (n-flonum #'1.0) (n-zero)) (attribute c.value)))]
+    #:do [(define-values (div-bindings value) (unary-div-c (attribute c.value)))]
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
       #`(c.bindings ...
          #,@div-bindings
-         [(real-binding) #,(n-flonum-stx (n-complex-real value))]
-         [(imag-binding) #,(n-flonum-stx (n-complex-imag value))]))
+         [(real-binding) #,(flonum-stx (c-real value))]
+         [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ (~between cs:opt-expr 2 +inf.0) ...)
     #:with (real-binding imag-binding) (binding-names)

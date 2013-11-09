@@ -9,61 +9,56 @@
   (for-template racket/base racket/unsafe/ops))
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
-(struct n-complex (real imag) #:transparent)
-(struct n-zero () #:transparent)
-(struct n-real (stx) #:transparent)
-(struct n-non-zero-real (stx) #:transparent)
-(struct n-flonum (stx) #:transparent)
+(struct c (real imag) #:transparent)
+(struct zero () #:transparent)
+(struct real (stx) #:transparent)
+(struct non-zero-real (stx) #:transparent)
+(struct flonum (stx) #:transparent)
 
-(define-match-expander c:
-  (syntax-parser
-    [(_ real imag)
-     #'(n-complex real imag)]))
+(define 0- (zero))
 
 (define-match-expander 0:
-  (syntax-parser
-    [(_)
-     #'(n-zero)]))
+  (syntax-parser [(_) #'(zero)]))
 
-(define-match-expander n-real:
+(define-match-expander real:
   (syntax-parser
     [(_ expr)
-     #'(or (n-real expr) (n-non-zero-real expr))]))
+     #'(or (real expr) (non-zero-real expr))]))
 
-(define-match-expander n-flonum:
+(define-match-expander flonum:
   (syntax-parser
     [(_ expr)
-     #'(or (n-flonum expr)
-           (n-non-zero-real (app (lambda (stx) #`(real->double-flonum #,stx)) expr)))]))
+     #'(or (flonum expr)
+           (non-zero-real (app (lambda (stx) #`(real->double-flonum #,stx)) expr)))]))
 
-(define-match-expander n-real/flonum:
+(define-match-expander real/flonum:
   (syntax-parser
     [(_ expr)
-     #'(or (n-real expr) (n-non-zero-real expr) (n-flonum expr))]))
+     #'(or (real expr) (non-zero-real expr) (flonum expr))]))
 
 (define (unsafe-stx v)
   (match v
-    [(n-flonum stx) stx]
-    [(n-non-zero-real stx) #`(real->double-flonum #,stx)]))
+    [(flonum stx) stx]
+    [(non-zero-real stx) #`(real->double-flonum #,stx)]))
 
 (define (safe-stx v)
   (match v
-    [(n-flonum stx) stx]
-    [(n-non-zero-real stx) stx]
-    [(n-real stx) stx]))
+    [(flonum stx) stx]
+    [(non-zero-real stx) stx]
+    [(real stx) stx]))
 
 (begin-for-syntax
 
   ;; Possible numbers
   (define-syntax-class number-type
     (pattern (~datum zero)
-      #:with pattern #'(n-zero))
+      #:with pattern #'(0:))
     (pattern (~datum flonum)
-      #:with pattern #'(n-flonum _))
+      #:with pattern #'(flonum _))
     (pattern (~datum real-not-zero)
-      #:with pattern #'(n-non-zero-real _))
+      #:with pattern #'(non-zero-real _))
     (pattern (~datum real)
-      #:with pattern #'(n-real _)))
+      #:with pattern #'(real _)))
 
   (define-syntax-class op-arg
     (pattern (t:number-type ...+)
@@ -80,7 +75,7 @@
 
   (define-splicing-syntax-class constructor
     #:attributes (constr)
-    (pattern (~seq) #:with constr #'n-real)
+    (pattern (~seq) #:with constr #'real)
     (pattern (~seq #:constructor constr:id)))
 
   (define-splicing-syntax-class (result safe-id unsafe-id)
@@ -89,7 +84,7 @@
       #:with f #'(lambda (v1 v2) e))
     (pattern (~seq #:unsafe)
       #:with unsafe unsafe-id
-      #:with f #'(lambda (v1 v2) (n-flonum #`(unsafe #,(unsafe-stx v1) #,(unsafe-stx v2) ))))
+      #:with f #'(lambda (v1 v2) (flonum #`(unsafe #,(unsafe-stx v1) #,(unsafe-stx v2) ))))
     (pattern (~seq #:safe c:constructor)
       #:with safe safe-id
       #:with f #'(lambda (v1 v2) (c.constr #`(safe #,(safe-stx v1) #,(safe-stx v2))))))
@@ -120,86 +115,81 @@
   [(zero) x => x]
   [x (zero) => x]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(any) (any) #:sym => #:safe #:constructor n-flonum])
+  [(any) (any) #:sym => #:safe #:constructor flonum])
 
 (define-real-op sub-r
   #:safe - #:unsafe unsafe-fl-
   [(zero) x => (negate-r x)]
   [x (zero) => x]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(any) (any) #:sym => #:safe #:constructor n-flonum])
+  [(any) (any) #:sym => #:safe #:constructor flonum])
 
 (define-real-op mult-r
   #:safe * #:unsafe unsafe-fl*
-  [(zero) x => (n-zero)]
-  [x (zero) => (n-zero)]
+  [(zero) x => 0-]
+  [x (zero) => 0-]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor n-non-zero-real]
+  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
 
 (define-real-op div-r
   #:safe / #:unsafe unsafe-fl/
-  [(zero) x => (n-zero)]
+  [(zero) x => 0-]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor n-non-zero-real]
+  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
 
 
 (define (negate-r v)
   (match v
-    [(0:) (n-zero)]
-    [(n-flonum s)
-     (n-flonum #`(unsafe-fl* -1.0 #,s))]
-    [(n-non-zero-real s)
-     (n-non-zero-real #`(- #,s))]
-    [(n-real s)
-     (n-real #`(- #,s))]))
+    [(zero) 0-]
+    [(flonum s)
+     (flonum #`(unsafe-fl* -1.0 #,s))]
+    [(non-zero-real s)
+     (non-zero-real #`(- #,s))]
+    [(real s)
+     (real #`(- #,s))]))
 
 
 
 (define (add-c v1 v2)
   (match* (v1 v2)
-    [((c: r1 i1) (c: r2 i2))
-     (n-complex
+    [((c r1 i1) (c r2 i2))
+     (c
        (add-r r1 r2)
        (add-r i1 i2))]))
 
 (define (sub-c v1 v2)
   (match* (v1 v2)
-    [((c: r1 i1)
-      (c: r2 i2))
-     (n-complex
-       (sub-r r1 r2)
-       (sub-r i1 i2))]))
+    [((c r1 i1) (c r2 i2))
+     (c (sub-r r1 r2) (sub-r i1 i2))]))
 
 
 (define (save r)
-  (define binding (generate-temporary))
-  (define constructor
-    (match r
-      [(n-zero) n-zero]
-      [(n-flonum _) n-flonum]
-      [(n-non-zero-real _) n-non-zero-real]
-      [(n-real _) n-real]))
-
   (match r
-    [(n-zero)
-     (values empty (n-zero))]
-    [(n-real/flonum: stx)
+    [(zero)
+     (values empty (zero))]
+    [(real/flonum: stx)
+     (define binding (generate-temporary))
+     (define constructor
+       (match r
+         [(flonum _) flonum]
+         [(non-zero-real _) non-zero-real]
+         [(real _) real]))
      (if (identifier? stx)
          (values empty r)
          (values (list #`[(#,binding) #,stx]) (constructor binding)))]))
 
 (define (mult-c v1 v2)
   (match* (v1 v2)
-    [((c: r1 i1) (c: r2 i2))
+    [((c r1 i1) (c r2 i2))
      (define-values (r1-binds r1*) (save r1))
      (define-values (i1-binds i1*) (save i1))
      (define-values (r2-binds r2*) (save r2))
      (define-values (i2-binds i2*) (save i2))
      (values
        (append r1-binds i1-binds r2-binds i2-binds)
-       (n-complex
+       (c
         (sub-r (mult-r r1* r2*)
                (mult-r i1* i2*))
         (add-r (mult-r i1* r2*)
@@ -286,26 +276,29 @@
     (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
     (values
       (list #`[(real imag) #,v])
-      (n-complex (n-flonum #'real) (n-flonum #'imag))))
+      (c(flonum #'real) (flonum #'imag))))
 
     (match* (v1 v2)
-      [((c: r1 (0:)) (c: r2 (0:)))
-       (values empty (n-complex (div-r r1 r2) (n-zero)))]
-      [((c: (n-flonum: r1) (0:)) (c: (n-flonum r2) (n-flonum i2)))
+      [((c r1 (0:)) (c r2 (0:)))
+       (values empty (c (div-r r1 r2) 0-))]
+      [((c (flonum: r1) (0:)) (c (flonum r2) (flonum i2)))
        (wrap (float-complex-/ r1 r2 i2))]
-      [((c: (n-flonum r1) (n-flonum i1)) (c: (n-flonum: r2) (0:)))
+      [((c (flonum r1) (flonum i1)) (c (flonum: r2) (0:)))
        (wrap (complex-float-/ r1 i1 r2))]
-      [((c: (n-flonum r1) (n-flonum i1)) (c: (n-flonum r2) (n-flonum i2)))
+      [((c (flonum r1) (flonum i1)) (c (flonum r2) (flonum i2)))
        (wrap (complex-complex-/ r1 i1 r2 i2))]))
+
+(define (unary-div-c v)
+  (div-c (c (non-zero-real #'1.0) 0-) v))
 
 
 (define (sum-c vs)
-  (for/fold ([acc (n-complex (n-zero) (n-zero))])
+  (for/fold ([acc (c 0- 0-)])
             ([v (in-list vs)])
     (add-c acc v)))
 
 (define (sum-r vs)
-  (for/fold ([acc (n-zero)])
+  (for/fold ([acc 0-])
             ([v (in-list vs)])
     (add-r acc v)))
 
@@ -321,7 +314,7 @@
 
 (define (mult-rs vs)
   (if (empty? vs)
-      (n-real #'1)
+      (real #'1)
       (for/fold ([acc (first vs)])
                 ([v (in-list (rest vs))])
         (sub-r acc v))))
@@ -329,7 +322,7 @@
 
 (define (mult-cs vs)
   (if (empty? vs)
-      (values empty (n-complex (n-non-zero-real #'1) (n-zero)))
+      (values empty (c (non-zero-real #'1) 0-))
       (for/fold ([bindings empty]
                  [acc (first vs)])
                 ([v (in-list (rest vs))])
