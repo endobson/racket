@@ -20,12 +20,7 @@
 (define-match-expander 0:
   (syntax-parser [(_) #'(zero)]))
 
-(define-match-expander real:
-  (syntax-parser
-    [(_ expr)
-     #'(or (real expr) (non-zero-real expr))]))
-
-(define-match-expander flonum:
+(define-match-expander flonum/coerce:
   (syntax-parser
     [(_ expr)
      #'(or (flonum expr)
@@ -43,9 +38,7 @@
 
 (define (safe-stx v)
   (match v
-    [(flonum stx) stx]
-    [(non-zero-real stx) stx]
-    [(real stx) stx]))
+    [(real/flonum: stx) stx]))
 
 (begin-for-syntax
 
@@ -167,10 +160,10 @@
 
 (define (save r)
   (match r
-    [(zero)
-     (values empty (zero))]
+    [(0:)
+     (values empty 0-)]
     [(real/flonum: stx)
-     (define binding (generate-temporary))
+     (define/with-syntax binding (generate-temporary))
      (define constructor
        (match r
          [(flonum _) flonum]
@@ -178,7 +171,7 @@
          [(real _) real]))
      (if (identifier? stx)
          (values empty r)
-         (values (list #`[(#,binding) #,stx]) (constructor binding)))]))
+         (values (list #`[(binding) #,stx]) (constructor #'binding)))]))
 
 (define (mult-c v1 v2)
   (match* (v1 v2)
@@ -281,9 +274,9 @@
     (match* (v1 v2)
       [((c r1 (0:)) (c r2 (0:)))
        (values empty (c (div-r r1 r2) 0-))]
-      [((c (flonum: r1) (0:)) (c (flonum r2) (flonum i2)))
+      [((c (flonum/coerce: r1) (0:)) (c (flonum r2) (flonum i2)))
        (wrap (float-complex-/ r1 r2 i2))]
-      [((c (flonum r1) (flonum i1)) (c (flonum: r2) (0:)))
+      [((c (flonum r1) (flonum i1)) (c (flonum/coerce: r2) (0:)))
        (wrap (complex-float-/ r1 i1 r2))]
       [((c (flonum r1) (flonum i1)) (c (flonum r2) (flonum i2)))
        (wrap (complex-complex-/ r1 i1 r2 i2))]))
