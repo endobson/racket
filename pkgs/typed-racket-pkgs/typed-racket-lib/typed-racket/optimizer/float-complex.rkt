@@ -163,11 +163,10 @@
   (pattern (#%plain-app op:*^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed float complex multiplication")]
-    #:do [(define-values (mult-bindings value) (mult-cs (attribute cs.value)))]
+    #:do [(define value (mult-cs (attribute cs.value)))]
     #:with (bindings ...)
       #`(cs.bindings ... ...
          #,@(c-bindings value)
-         #,@mult-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 

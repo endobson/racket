@@ -13,6 +13,7 @@
 (struct c (bindings real imag) #:transparent)
 
 (define complex c)
+(define (c* real imag) (c empty real imag))
 
 
 (define (if-c cond t f)
@@ -50,13 +51,11 @@
      (define-values (i1-binds i1*) (save i1))
      (define-values (r2-binds r2*) (save r2))
      (define-values (i2-binds i2*) (save i2))
-     (values
-       (append r1-binds i1-binds r2-binds i2-binds)
-       (c (append binds1 binds2)
-        (sub-r (mult-r r1* r2*)
-               (mult-r i1* i2*))
-        (add-r (mult-r i1* r2*)
-               (mult-r i2* r1*))))]))
+     (c (append binds1 binds2 r1-binds i1-binds r2-binds i2-binds)
+      (sub-r (mult-r r1* r2*)
+             (mult-r i1* i2*))
+      (add-r (mult-r i1* r2*)
+             (mult-r i2* r1*)))]))
 
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
@@ -120,7 +119,7 @@
 
 
 (define (sum-c vs)
-  (for/fold ([acc (c empty 0- 0-)])
+  (for/fold ([acc (c* 0- 0-)])
             ([v (in-list vs)])
     (add-c acc v)))
 
@@ -131,13 +130,10 @@
 
 (define (mult-cs vs)
   (if (empty? vs)
-      (values empty (c empty (non-zero-real #'1) 0-))
-      (for/fold ([bindings empty]
-                 [acc (first vs)])
+      (c* (non-zero-real #'1) 0-)
+      (for/fold ([acc (first vs)])
                 ([v (in-list (rest vs))])
-        (define-values (new-bindings new-val) (mult-c acc v))
-        (values (append bindings new-bindings)
-                new-val))))
+        (mult-c acc v))))
 
 (define (div-cs v vs)
   (for/fold ([bindings empty]
