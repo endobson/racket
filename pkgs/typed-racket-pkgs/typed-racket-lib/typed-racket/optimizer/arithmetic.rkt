@@ -219,41 +219,36 @@
         (add-r (mult-r i1* r2*)
                (mult-r i2* r1*))))]))
 
-
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
-(define (complex-complex-/ a-r b-r c-r d-r)
-  (define a (safe-stx a-r))
-  (define b (safe-stx b-r))
-  (define c (safe-stx c-r))
-  (define d (safe-stx d-r))
+(define (complex-complex-/ a b c d)
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
-    (values-r (add-r (div-r a-r c-r) (mult-r d-r b-r))
-              (sub-r (div-r b-r c-r) (mult-r d-r a-r))))
+    (values-r (add-r (div-r a c) (mult-r d b))
+              (sub-r (div-r b c) (mult-r d a))))
   (define c=0-case
-    (values-r (add-r (div-r b-r d-r) (mult-r c-r a-r))
-              (sub-r (mult-r c-r b-r) (div-r a-r d-r))))
+    (values-r (add-r (div-r b d) (mult-r c a))
+              (sub-r (mult-r c b) (div-r a d))))
 
-  (define (general-body a b c d)
+  (define general-body
     (let* ([r (div-r c d)]
            [den (add-r d (mult-r c r))]
            [i (div-r (sub-r (mult-r b r) a) den)])
       (values-r (div-r (add-r b (mult-r a r)) den) i)))
-  (define (general-body-swapped a b c d)
+  (define general-body-swapped
     (let* ([r (div-r d c)]
            [den (add-r c (mult-r d r))]
            [i (div-r (sub-r b (mult-r a r)) den)])
       (values-r (div-r (add-r a (mult-r b r)) den) i)))
 
   (define general-case
-    #`(if #,(<-r (abs-r c-r) (abs-r d-r))
-          #,(general-body-swapped a-r b-r c-r d-r)
-          #,(general-body a-r b-r c-r d-r)))
+    #`(if #,(<-r (abs-r c) (abs-r d))
+          #,general-body-swapped
+          #,general-body))
 
   (wrap
-    #`(cond [#,(zero?-r d-r) #,d=0-case]
-            [#,(zero?-r c-r) #,c=0-case]
+    #`(cond [#,(zero?-r d) #,d=0-case]
+            [#,(zero?-r c) #,c=0-case]
             [else            #,general-case])))
 
 (define (wrap v)
