@@ -25,47 +25,22 @@
        [(values-r: binds (list v-r v-i))
         (c binds v-r v-i)])]))
 
-(define (with-bindings bindings v)
-  (match v
-    [(c binds r i)
-     (c (append bindings binds) r i)]))
-
-
-
-
-(define (add-c v1 v2)
-  (match* (v1 v2)
-    [((c binds1 r1 i1) (c binds2 r2 i2))
-     (c (append binds1 binds2)
-       (add-r r1 r2)
-       (add-r i1 i2))]))
-
-(define (sub-c v1 v2)
-  (match* (v1 v2)
-    [((c binds1 r1 i1) (c binds2 r2 i2))
-     (c (append binds1 binds2)
-        (sub-r r1 r2)
-        (sub-r i1 i2))]))
+(define-syntax with-bindings
+  (syntax-parser
+    [(_ bindings . body)
+     #'(let ((binds1 bindings))
+         (match (let () . body)
+           [(c binds2 r i)
+            (c (append binds1 binds2) r i)]))]))
 
 (define-syntax let*-c
   (syntax-parser
-    [(_ ([names:id bound:expr] ...) body:expr)
+    [(_ ([names:id bound:expr] ...) . body:expr)
      (define/with-syntax (bindings ...) (generate-temporaries #'(names ...)))
      #'(let*-values ([(bindings names) (save bound 'names)] ...)
          (with-bindings (append bindings ...)
-           body))]))
+           . body))]))
 
-
-
-(define (mult-c v1 v2)
-  (match* (v1 v2)
-    [((c binds1 r1 i1) (c binds2 r2 i2))
-     (with-bindings (append binds2 binds2)
-       (let*-c ([r1* r1] [i1* i1] [r2* r2] [i2* i2])
-         (c* (sub-r (mult-r r1* r2*)
-                    (mult-r i1* i2*))
-             (add-r (mult-r i1* r2*)
-                    (mult-r i2* r1*)))))]))
 
 (define-syntax cond-c
   (syntax-parser
@@ -74,42 +49,64 @@
     [(_ [cond:expr body:expr] clause:expr ...)
      #'(if-c cond body (cond-c clause ...))]))
 
-;; a+bi / c+di -> syntax 
-;; a,b,c,d are floats (!= exact 0)
-(define (complex-complex-/ a b c d)
-  ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
-  (define d=0-case
-    (c* (add-r (div-r a c) (mult-r d b))
-        (sub-r (div-r b c) (mult-r d a))))
-  (define c=0-case
-    (c* (add-r (div-r b d) (mult-r c a))
-        (sub-r (mult-r c b) (div-r a d))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Actual implementations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (define general-case
-    (let*-c ([r (div-r c d)]
-             [den (add-r d (mult-r c r))]
-             [i (div-r (sub-r (mult-r b r) a) den)])
-      (c* (div-r (add-r b (mult-r a r)) den) i)))
-  (define general-case-swapped
-    (let*-c ([r (div-r d c)]
-             [den (add-r c (mult-r d r))]
-             [i (div-r (sub-r b (mult-r a r)) den)])
-      (c* (div-r (add-r a (mult-r b r)) den) i)))
+(define (add-c v1 v2)
+  (match* (v1 v2)
+    [((c binds1 r1 i1) (c binds2 r2 i2))
+     (with-bindings (append binds1 binds2)
+       (c* (add-r r1 r2)
+           (add-r i1 i2)))]))
 
-  (cond-c
-    [(zero?-r d) d=0-case]
-    [(zero?-r c) c=0-case]
-    [(<-r (abs-r c) (abs-r d))
-     general-case-swapped]
-    [else general-case]))
+(define (sub-c v1 v2)
+  (match* (v1 v2)
+    [((c binds1 r1 i1) (c binds2 r2 i2))
+     (with-bindings (append binds1 binds2)
+     (c* (sub-r r1 r2)
+         (sub-r i1 i2)))]))
 
+(define (mult-c v1 v2)
+  (match* (v1 v2)
+    [((c binds1 r1* i1*) (c binds2 r2* i2*))
+     (with-bindings (append binds2 binds2)
+       (let*-c ([r1 r1*] [i1 i1*] [r2 r2*] [i2 i2*])
+         (c* (sub-r (mult-r r1 r2)
+                    (mult-r i1 i2))
+             (add-r (mult-r i1 r2)
+                    (mult-r i2 r1)))))]))
 
 (define (div-c v1 v2)
   (match* (v1 v2)
     [((c binds1 r1 i1) (c binds2 r2 i2))
      (with-bindings (append binds1 binds2)
-       (let*-c ([r1* r1] [i1* i1] [r2* r2] [i2* i2])
-         (complex-complex-/ r1* i1* r2* i2*)))]))
+       (let*-c ([a r1] [b i1] [c r2] [d i2])
+         (define d=0-case
+           (c* (add-r (div-r a c) (mult-r d b))
+               (sub-r (div-r b c) (mult-r d a))))
+         (define c=0-case
+           (c* (add-r (div-r b d) (mult-r c a))
+               (sub-r (mult-r c b) (div-r a d))))
+
+         (define general-case
+           (let*-c ([r (div-r c d)]
+                    [den (add-r d (mult-r c r))]
+                    [i (div-r (sub-r (mult-r b r) a) den)])
+             (c* (div-r (add-r b (mult-r a r)) den) i)))
+         (define general-case-swapped
+           (let*-c ([r (div-r d c)]
+                    [den (add-r c (mult-r d r))]
+                    [i (div-r (sub-r b (mult-r a r)) den)])
+             (c* (div-r (add-r a (mult-r b r)) den) i)))
+
+         (cond-c
+           [(zero?-r d) d=0-case]
+           [(zero?-r c) c=0-case]
+           [(<-r (abs-r c) (abs-r d))
+            general-case-swapped]
+           [else general-case])))]))
+
 
 (define (unary-div-c v)
   (div-c (c empty (non-zero-real #'1.0) 0-) v))
