@@ -25,6 +25,11 @@
        [(values-r: binds (list v-r v-i))
         (c binds v-r v-i)])]))
 
+(define (with-bindings bindings v)
+  (match v
+    [(c binds r i)
+     (c (append bindings binds) r i)]))
+
 
 
 
@@ -62,32 +67,31 @@
 (define (complex-complex-/ binds a b c d)
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
-    (complex binds
-             (add-r (div-r a c) (mult-r d b))
-             (sub-r (div-r b c) (mult-r d a))))
+    (c* (add-r (div-r a c) (mult-r d b))
+        (sub-r (div-r b c) (mult-r d a))))
   (define c=0-case
-    (complex binds
-             (add-r (div-r b d) (mult-r c a))
-             (sub-r (mult-r c b) (div-r a d))))
+    (c* (add-r (div-r b d) (mult-r c a))
+        (sub-r (mult-r c b) (div-r a d))))
 
   (define general-body
     (let* ([r (div-r c d)]
            [den (add-r d (mult-r c r))]
            [i (div-r (sub-r (mult-r b r) a) den)])
-      (complex binds (div-r (add-r b (mult-r a r)) den) i)))
+      (c* (div-r (add-r b (mult-r a r)) den) i)))
   (define general-body-swapped
     (let* ([r (div-r d c)]
            [den (add-r c (mult-r d r))]
            [i (div-r (sub-r b (mult-r a r)) den)])
-      (complex binds (div-r (add-r a (mult-r b r)) den) i)))
+      (c* (div-r (add-r a (mult-r b r)) den) i)))
 
   (define general-case
     (if-c (<-r (abs-r c) (abs-r d))
           general-body-swapped
           general-body))
-  (if-c (zero?-r d) d=0-case
-        (if-c (zero?-r c) c=0-case
-              general-case)))
+  (with-bindings binds
+    (if-c (zero?-r d) d=0-case
+          (if-c (zero?-r c) c=0-case
+                general-case))))
 
 
 (define (div-c v1 v2)
