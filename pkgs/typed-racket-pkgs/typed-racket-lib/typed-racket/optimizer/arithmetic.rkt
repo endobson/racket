@@ -36,6 +36,12 @@
     [(_ expr)
      #'(or (real expr) (non-zero-real expr) (flonum expr))]))
 
+(define-match-expander any-r:
+  (syntax-parser
+    [(_ expr)
+     #'(or (real expr) (non-zero-real expr) (flonum expr) (and (0:) (app safe-stx expr)))]))
+
+
 (define (unsafe-stx v)
   (match v
     [(flonum stx) stx]
@@ -168,9 +174,9 @@
 (define (<-r v1 v2)
   (match* (v1 v2)
     [((flonum s1) (flonum s2))
-     #`(unsafe-fl< #,s1 #,s2)]
+     (bool #`(unsafe-fl< #,s1 #,s2))]
     [(_ _)
-     #`(< #,(safe-stx v1) #,(safe-stx v2))]))
+     (bool #`(< #,(safe-stx v1) #,(safe-stx v2)))]))
 
 (define (values-r . vs)
   #`(values #,@(map safe-stx vs)))
@@ -181,19 +187,27 @@
     [(flonum stx) (bool #`(unsafe-fl= 0.0 #,stx))]
     [_ (bool #`(zero? #,(safe-stx v)))]))
 
-#|
-(define (if0-r c t f)
-  (match c
-    [(0:) t]
-    [else
-      (define check
-        (match c
-          [(flonum stx) #`(unsafe-fl= 0.0 #,stx)]
-          [_ #`(zero? #,(safe-stx v))]))
+(define (if-stx c t f)
+  #`(if #,c #,t #,f))
 
-      (match* (t f)
-        [
-|#
+(define (if-r c t f)
+  (match c
+    [(true) t]
+    [(false) f]
+    [(bool c-stx)
+     (match* (t f)
+       [((0:) (0:)) 0-]
+       [((flonum t-stx) (flonum f-stx)) (flonum (if-stx c-stx t-stx f-stx))]
+       [((non-zero-real t-stx) (flonum f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
+       [((flonum t-stx) (non-zero-real f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
+       [((non-zero-real t-stx) (non-zero-real f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
+       [((any-r: t-stx) (any-r: f-stx)) (real (if-stx c-stx t-stx f-stx))])]))
+
+
+(define (if-c cond t f)
+  (match* (t f)
+    [((c t-r t-i) (c f-r f-i))
+     (c (if-r cond t-r f-r) (if-r cond t-i f-i))]))
 
 
 
@@ -248,49 +262,42 @@
 (define (complex-complex-/ a b c d)
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
-    (values-r (add-r (div-r a c) (mult-r d b))
+    (complex (add-r (div-r a c) (mult-r d b))
               (sub-r (div-r b c) (mult-r d a))))
   (define c=0-case
-    (values-r (add-r (div-r b d) (mult-r c a))
+    (complex (add-r (div-r b d) (mult-r c a))
               (sub-r (mult-r c b) (div-r a d))))
 
   (define general-body
     (let* ([r (div-r c d)]
            [den (add-r d (mult-r c r))]
            [i (div-r (sub-r (mult-r b r) a) den)])
-      (values-r (div-r (add-r b (mult-r a r)) den) i)))
+      (complex (div-r (add-r b (mult-r a r)) den) i)))
   (define general-body-swapped
     (let* ([r (div-r d c)]
            [den (add-r c (mult-r d r))]
            [i (div-r (sub-r b (mult-r a r)) den)])
-      (values-r (div-r (add-r a (mult-r b r)) den) i)))
+      (complex (div-r (add-r a (mult-r b r)) den) i)))
 
   (define general-case
-    #`(if #,(<-r (abs-r c) (abs-r d))
-          #,general-body-swapped
-          #,general-body))
-
-  (wrap
-    #`(cond [#,(safe-bool-stx (zero?-r d)) #,d=0-case]
-            [#,(safe-bool-stx (zero?-r c)) #,c=0-case]
-            [else                          #,general-case])))
-
-(define (wrap v)
-  (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
+    (if-c (<-r (abs-r c) (abs-r d))
+          general-body-swapped
+          general-body))
   (values
-    (list #`[(real imag) #,v])
-    (c (flonum #'real) (flonum #'imag))))
+    empty
+    (if-c (zero?-r d) d=0-case
+          (if-c (zero?-r c) c=0-case
+                general-case))))
 
 
 (define (div-c v1 v2)
     (match* (v1 v2)
       [((c r1 (0:)) (c r2 (0:)))
-       (values empty (c (div-r r1 r2) 0-))]
+       (complex-complex-/ r1 0- r2 0-) ]
       [((c (or (? flonum? r1) (? non-zero-real? r1)) (0:)) (c (? flonum? r2) (? flonum? i2)))
        (complex-complex-/ r1 0- r2 i2)]
       [((c (? flonum? r1) (? flonum? i1)) (c (or (? flonum? r2) (? non-zero-real? r2)) (0:)))
        (complex-complex-/ r1 i1 r2 0-)]
-      ;; Buggy on single flonum reals
       [((c (? flonum? r1) (? flonum? i1))
         (c (or (? flonum? r2) (? non-zero-real? r2))
            (or (? flonum? i2) (? non-zero-real? i2))))
