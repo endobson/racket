@@ -247,7 +247,8 @@
        [((values-r t-binds t-args) (values-r f-binds f-args))
         (unless (equal? (length t-args) (length f-args))
           (error 'if-r/values "Branches have different number of values."))
-        (define/with-syntax (vs ...) (generate-temporaries t-args))
+        (define/with-syntax (vs ...)
+          (generate-temporaries (map (lambda (x) 'merged) t-args)))
         (values-r
           (list
             #`[(vs ...)
@@ -256,12 +257,12 @@
                    (let*-values (#,@f-binds) (values #,@(map safe-stx f-args))))])
           (stx-map merge-r t-args f-args #'(vs ...)))])]))
 
-(define (save r)
+(define (save r [name 'saved])
   (match r
     [(0:)
      (values empty 0-)]
     [(real/flonum: stx)
-     (define/with-syntax binding (generate-temporary))
+     (define/with-syntax binding (generate-temporary name))
      (define constructor
        (match r
          [(flonum _) flonum]

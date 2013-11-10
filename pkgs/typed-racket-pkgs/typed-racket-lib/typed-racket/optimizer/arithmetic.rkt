@@ -51,7 +51,7 @@
   (syntax-parser
     [(_ ([names:id bound:expr] ...) body:expr)
      (define/with-syntax (bindings ...) (generate-temporaries #'(names ...)))
-     #'(let*-values ([(bindings names) (save bound)] ...)
+     #'(let*-values ([(bindings names) (save bound 'names)] ...)
          (with-bindings (append bindings ...)
            body))]))
 
@@ -86,14 +86,14 @@
         (sub-r (mult-r c b) (div-r a d))))
 
   (define general-case
-    (let* ([r (div-r c d)]
-           [den (add-r d (mult-r c r))]
-           [i (div-r (sub-r (mult-r b r) a) den)])
+    (let*-c ([r (div-r c d)]
+             [den (add-r d (mult-r c r))]
+             [i (div-r (sub-r (mult-r b r) a) den)])
       (c* (div-r (add-r b (mult-r a r)) den) i)))
   (define general-case-swapped
-    (let* ([r (div-r d c)]
-           [den (add-r c (mult-r d r))]
-           [i (div-r (sub-r b (mult-r a r)) den)])
+    (let*-c ([r (div-r d c)]
+             [den (add-r c (mult-r d r))]
+             [i (div-r (sub-r b (mult-r a r)) den)])
       (c* (div-r (add-r a (mult-r b r)) den) i)))
 
   (cond-c
@@ -108,7 +108,8 @@
   (match* (v1 v2)
     [((c binds1 r1 i1) (c binds2 r2 i2))
      (with-bindings (append binds1 binds2)
-       (complex-complex-/ r1 i1 r2 i2))]))
+       (let*-c ([r1* r1] [i1* i1] [r2* r2] [i2* i2])
+         (complex-complex-/ r1* i1* r2* i2*)))]))
 
 (define (unary-div-c v)
   (div-c (c empty (non-zero-real #'1.0) 0-) v))
