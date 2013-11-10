@@ -71,7 +71,7 @@
 
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
-(define (complex-complex-/ binds a b c d)
+(define (complex-complex-/ a b c d)
   ;; we have the same cases as the Racket `/' primitive (except for the non-float ones)
   (define d=0-case
     (c* (add-r (div-r a c) (mult-r d b))
@@ -91,36 +91,19 @@
            [i (div-r (sub-r b (mult-r a r)) den)])
       (c* (div-r (add-r a (mult-r b r)) den) i)))
 
-  (with-bindings binds
-    (cond-c
-      [(zero?-r d) d=0-case]
-      [(zero?-r c) c=0-case]
-      [(<-r (abs-r c) (abs-r d))
-       general-case-swapped]
-      [else general-case])))
+  (cond-c
+    [(zero?-r d) d=0-case]
+    [(zero?-r c) c=0-case]
+    [(<-r (abs-r c) (abs-r d))
+     general-case-swapped]
+    [else general-case]))
 
 
 (define (div-c v1 v2)
-    (match* (v1 v2)
-      [((c binds1 r1 (0:)) (c binds2 r2 (0:)))
-       (complex-complex-/ (append binds1 binds2) r1 0- r2 0-) ]
-      [((c binds1 (or (? flonum? r1) (? non-zero-real? r1)) (0:))
-        (c binds2 (? flonum? r2) (? flonum? i2)))
-       (complex-complex-/ (append binds1 binds2) r1 0- r2 i2)]
-      [((c binds1 (? flonum? r1) (? flonum? i1))
-        (c binds2 (or (? flonum? r2) (? non-zero-real? r2)) (0:)))
-       (complex-complex-/ (append binds1 binds2) r1 i1 r2 0-)]
-      [((c binds1 (? flonum? r1) (? flonum? i1))
-        (c binds2
-           (or (? flonum? r2) (? non-zero-real? r2))
-           (or (? flonum? i2) (? non-zero-real? i2))))
-       (complex-complex-/ (append binds1 binds2) r1 i1 r2 i2)]
-      [((c binds1
-           (or (? flonum? r1) (? non-zero-real? r1))
-           (or (? flonum? i1) (? non-zero-real? i1)))
-        (c binds2
-           (? flonum? r2) (? flonum? i2)))
-       (complex-complex-/ (append binds1 binds2) r1 i1 r2 i2)]))
+  (match* (v1 v2)
+    [((c binds1 r1 i1) (c binds2 r2 i2))
+     (with-bindings (append binds1 binds2)
+       (complex-complex-/ r1 i1 r2 i2))]))
 
 (define (unary-div-c v)
   (div-c (c empty (non-zero-real #'1.0) 0-) v))
