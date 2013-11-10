@@ -85,11 +85,9 @@
     (if-c (<-r (abs-r c) (abs-r d))
           general-body-swapped
           general-body))
-  (values
-    empty
-    (if-c (zero?-r d) d=0-case
-          (if-c (zero?-r c) c=0-case
-                general-case))))
+  (if-c (zero?-r d) d=0-case
+        (if-c (zero?-r c) c=0-case
+              general-case)))
 
 
 (define (div-c v1 v2)
@@ -136,10 +134,7 @@
         (mult-c acc v))))
 
 (define (div-cs v vs)
-  (for/fold ([bindings empty]
-             [acc v])
+  (for/fold ([acc v])
             ([v (in-list vs)])
-    (define-values (new-bindings new-val) (div-c acc v))
-    (values (append bindings new-bindings)
-            new-val)))
+    (div-c acc v)))
 

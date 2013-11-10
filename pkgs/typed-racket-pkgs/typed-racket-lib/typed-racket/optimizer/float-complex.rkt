@@ -172,23 +172,21 @@
 
   (pattern (#%plain-app op:/^ c:lifted-complex cs:lifted-complex  ...+)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(define-values (div-bindings value) (div-cs (attribute c.value) (attribute cs.value)))]
+    #:do [(define value (div-cs (attribute c.value) (attribute cs.value)))]
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
       #`(c.bindings ... cs.bindings ... ...
          #,@(c-bindings value)
-         #,@div-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ c:lifted-complex) ; unary /
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(define-values (div-bindings value) (unary-div-c (attribute c.value)))]
+    #:do [(define value (unary-div-c (attribute c.value)))]
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
       #`(c.bindings ...
          #,@(c-bindings value)
-         #,@div-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
