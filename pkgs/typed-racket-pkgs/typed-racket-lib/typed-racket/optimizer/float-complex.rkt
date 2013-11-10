@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require syntax/parse syntax/stx racket/dict racket/promise
+(require syntax/parse syntax/stx racket/dict racket/promise racket/list
          racket/syntax racket/match syntax/parse/experimental/specialize
          "../utils/utils.rkt" racket/unsafe/ops unstable/sequence
          (for-template racket/base racket/math racket/flonum racket/unsafe/ops)
@@ -89,11 +89,11 @@
 (define-syntax-class lifted-complex
   #:attributes ([bindings 1] value)
   (pattern (~and _:float-complex-expr ~! :actual-unboxed-float-complex-opt-expr)
-    #:attr value (c (flonum #'real-binding) (flonum #'imag-binding)))
+    #:attr value (c empty (flonum #'real-binding) (flonum #'imag-binding)))
   (pattern (~and e:float-expr)
     #:with e* (generate-temporary)
     #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (c (flonum #'e*) 0-))
+    #:attr value (c empty (flonum #'e*) 0-))
   (pattern (~and e:real-expr)
     #:do [(log-missed-complex-expr)
           (log-unboxing-opt "non float real in complex ops")
@@ -103,7 +103,7 @@
                 non-zero-real))]
     #:with e* (generate-temporary 'real)
     #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (c (constr #'e*) 0-))
+    #:attr value (c empty (constr #'e*) 0-))
   (pattern (~and e:number-expr)
     #:do [(log-missed-complex-expr)
           (log-unboxing-opt "non float complex in complex ops")
@@ -117,7 +117,7 @@
            #'([(e*) e.opt]
               [(real-binding) (real-part e*)]
               [(imag-binding) (imag-part e*)])
-    #:attr value (c (constr #'real-binding) (constr #'imag-binding))))
+    #:attr value (c empty (constr #'real-binding) (constr #'imag-binding))))
 
 
 
@@ -132,9 +132,11 @@
     #:with (bindings ...)
       #`(cs.bindings ... ...
          #,@(let ([value (sum-c (attribute cs.value))])
-               (list
-                #`((real-binding) #,(flonum-stx (c-real value)))
-                #`((imag-binding) #,(flonum-stx (c-imag value)))))))
+              (append
+                (c-bindings value)
+                (list
+                  #`((real-binding) #,(flonum-stx (c-real value)))
+                  #`((imag-binding) #,(flonum-stx (c-imag value))))))))
   (pattern (#%plain-app op:+^ :unboxed-float-complex-opt-expr)
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
@@ -145,9 +147,11 @@
     #:with (bindings ...)
       #`(c.bindings ... cs.bindings ... ...
          #,@(let ([value (sub-cs (attribute c.value) (attribute cs.value))])
-               (list
-                #`((real-binding) #,(flonum-stx (c-real value)))
-                #`((imag-binding) #,(flonum-stx (c-imag value)))))))
+              (append
+                (c-bindings value)
+                (list
+                 #`((real-binding) #,(flonum-stx (c-real value)))
+                 #`((imag-binding) #,(flonum-stx (c-imag value))))))))
   (pattern (#%plain-app op:-^ c1:unboxed-float-complex-opt-expr) ; unary -
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed unary float complex")]
@@ -162,6 +166,7 @@
     #:do [(define-values (mult-bindings value) (mult-cs (attribute cs.value)))]
     #:with (bindings ...)
       #`(cs.bindings ... ...
+         #,@(c-bindings value)
          #,@mult-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
@@ -172,6 +177,7 @@
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
       #`(c.bindings ... cs.bindings ... ...
+         #,@(c-bindings value)
          #,@div-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
@@ -182,6 +188,7 @@
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
       #`(c.bindings ...
+         #,@(c-bindings value)
          #,@div-bindings
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))

@@ -12,7 +12,10 @@
   abs-r
   zero?-r
   save
+
+  if-r/values
   (rename-out [values-r* values-r])
+  values-r:
   
   ;; Should remove
   real
@@ -49,6 +52,9 @@
 
 (define-match-expander 0:
   (syntax-parser [(_) #'(zero)]))
+
+(define-match-expander values-r:
+  (syntax-parser [(_ binds args) #'(values-r binds args)]))
 
 (define-match-expander flonum/coerce:
   (syntax-parser
@@ -239,14 +245,15 @@
     [(bool c-stx)
      (match* (t f)
        [((values-r t-binds t-args) (values-r f-binds f-args))
-        (unless (equal? (length t-args) (f-args))
+        (unless (equal? (length t-args) (length f-args))
           (error 'if-r/values "Branches have different number of values."))
         (define/with-syntax (vs ...) (generate-temporaries t-args))
         (values-r
-          #`[(vs ...)
-             (if #,c-stx
-                 (let*-values (#,@t-binds) (values #,@(map safe-stx t-args)))
-                 (let*-values (#,@f-binds) (values #,@(map safe-stx f-args))))]
+          (list
+            #`[(vs ...)
+               (if #,c-stx
+                   (let*-values (#,@t-binds) (values #,@(map safe-stx t-args)))
+                   (let*-values (#,@f-binds) (values #,@(map safe-stx f-args))))])
           (stx-map merge-r t-args f-args #'(vs ...)))])]))
 
 (define (save r)
