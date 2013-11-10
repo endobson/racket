@@ -12,6 +12,7 @@
   abs-r
   zero?-r
   save
+  (rename-out [values-r* values-r])
   
   ;; Should remove
   real
@@ -27,6 +28,7 @@
 (require
   racket/list
   racket/syntax
+  syntax/stx
   racket/match
   (for-syntax racket/base syntax/parse unstable/syntax racket/set)
   (for-template racket/base racket/unsafe/ops))
@@ -42,6 +44,8 @@
 (struct bool (stx))
 
 (define 0- (zero))
+
+(struct values-r (bindings vals))
 
 (define-match-expander 0:
   (syntax-parser [(_) #'(zero)]))
@@ -199,9 +203,6 @@
     [(_ _)
      (bool #`(< #,(safe-stx v1) #,(safe-stx v2)))]))
 
-(define (values-r . vs)
-  #`(values #,@(map safe-stx vs)))
-
 (define (zero?-r v)
   (match v
     [(0:) (true)]
@@ -211,18 +212,42 @@
 (define (if-stx c t f)
   #`(if #,c #,t #,f))
 
+
+;; Stx must represent one or both of the two values in v1 and v2
+(define (merge-r v1 v2 stx)
+  (match* (v1 v2)
+    [((0:) (0:)) 0-]
+    [((flonum t-stx) (flonum f-stx)) (flonum stx)]
+    [((non-zero-real t-stx) (flonum f-stx)) (non-zero-real stx)]
+    [((flonum t-stx) (non-zero-real f-stx)) (non-zero-real stx)]
+    [((non-zero-real t-stx) (non-zero-real f-stx)) (non-zero-real stx)]
+    [((any-r: t-stx) (any-r: f-stx)) (real stx)]))
+
+
 (define (if-r c t f)
   (match c
     [(true) t]
     [(false) f]
     [(bool c-stx)
      (match* (t f)
-       [((0:) (0:)) 0-]
-       [((flonum t-stx) (flonum f-stx)) (flonum (if-stx c-stx t-stx f-stx))]
-       [((non-zero-real t-stx) (flonum f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
-       [((flonum t-stx) (non-zero-real f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
-       [((non-zero-real t-stx) (non-zero-real f-stx)) (non-zero-real (if-stx c-stx t-stx f-stx))]
-       [((any-r: t-stx) (any-r: f-stx)) (real (if-stx c-stx t-stx f-stx))])]))
+       [((any-r: t-stx) (any-r: f-stx)) (merge-r t f (if-stx c-stx t-stx f-stx))])]))
+
+(define (if-r/values c t f)
+  (match c
+    [(true) t]
+    [(false) f]
+    [(bool c-stx)
+     (match* (t f)
+       [((values-r t-binds t-args) (values-r f-binds f-args))
+        (unless (equal? (length t-args) (f-args))
+          (error 'if-r/values "Branches have different number of values."))
+        (define/with-syntax (vs ...) (generate-temporaries t-args))
+        (values-r
+          #`[(vs ...)
+             (if #,c-stx
+                 (let*-values (#,@t-binds) (values #,@(map safe-stx t-args)))
+                 (let*-values (#,@f-binds) (values #,@(map safe-stx f-args))))]
+          (stx-map merge-r t-args f-args #'(vs ...)))])]))
 
 (define (save r)
   (match r
@@ -239,3 +264,5 @@
          (values empty r)
          (values (list #`[(binding) #,stx]) (constructor #'binding)))]))
 
+(define (values-r* bindings . args)
+  (values-r bindings args))
