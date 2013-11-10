@@ -131,7 +131,7 @@
     #:do [(log-unboxing-opt "unboxed float complex addition")]
     #:with (bindings ...)
       #`(cs.bindings ... ...
-         #,@(let ([value (sum-c (attribute cs.value))])
+         #,@(let ([value (add-cs (attribute cs.value))])
               (append
                 (c-bindings value)
                 (list
@@ -141,12 +141,12 @@
     #:do [(log-unboxing-opt "unboxed unary float complex")])
 
 
-  (pattern (#%plain-app op:-^ c:lifted-complex cs:lifted-complex ...+)
+  (pattern (#%plain-app op:-^ (~between cs:lifted-complex 2 +inf.0) ...)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
-      #`(c.bindings ... cs.bindings ... ...
-         #,@(let ([value (sub-cs (attribute c.value) (attribute cs.value))])
+      #`(cs.bindings ... ...
+         #,@(let ([value (sub-cs (attribute cs.value))])
               (append
                 (c-bindings value)
                 (list
@@ -170,19 +170,19 @@
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
-  (pattern (#%plain-app op:/^ c:lifted-complex cs:lifted-complex  ...+)
+  (pattern (#%plain-app op:/^ (~between cs:lifted-complex 2 +inf.0) ...)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(define value (div-cs (attribute c.value) (attribute cs.value)))]
+    #:do [(define value (div-cs (attribute cs.value)))]
     #:do [(log-unboxing-opt "unboxed binary float complex")]
     #:with (bindings ...)
-      #`(c.bindings ... cs.bindings ... ...
+      #`(cs.bindings ... ...
          #,@(c-bindings value)
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ c:lifted-complex) ; unary /
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(define value (unary-div-c (attribute c.value)))]
+    #:do [(define value (div-cs (list (attribute c.value))))]
     #:do [(log-unboxing-opt "unboxed unary float complex")]
     #:with (bindings ...)
       #`(c.bindings ...

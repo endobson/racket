@@ -12,9 +12,10 @@
 ;; so shouldn't be duplicated but reordering is fine
 (struct c (bindings real imag) #:transparent)
 
-(define complex c)
 (define (c* real imag) (c empty real imag))
 
+(define 0c (c* 0- 0-))
+(define 1c (c* (non-zero-real #'1) 0-))
 
 (define (if-c cond t f)
   (match* (t f)
@@ -108,29 +109,33 @@
            [else general-case])))]))
 
 
-(define (unary-div-c v)
-  (div-c (c empty (non-zero-real #'1.0) 0-) v))
 
-
-(define (sum-c vs)
-  (for/fold ([acc (c* 0- 0-)])
+(define (add-cs vs)
+  (for/fold ([acc 0c])
             ([v (in-list vs)])
     (add-c acc v)))
 
-(define (sub-cs v vs)
-  (for/fold ([acc v])
-            ([v (in-list vs)])
-    (sub-c acc v)))
+(define (sub-cs vs)
+  (cond
+    [(empty? vs) (error 'sub-cs "subtraction cannot handle 0 args")]
+    [(empty? (rest vs)) (sub-c 0c (first vs))]
+    [else
+     (for/fold ([acc (first vs)])
+               ([v (in-list (rest vs))])
+       (sub-c acc v))]))
 
 (define (mult-cs vs)
   (if (empty? vs)
-      (c* (non-zero-real #'1) 0-)
+      1c
       (for/fold ([acc (first vs)])
                 ([v (in-list (rest vs))])
         (mult-c acc v))))
 
-(define (div-cs v vs)
-  (for/fold ([acc v])
-            ([v (in-list vs)])
-    (div-c acc v)))
-
+(define (div-cs vs)
+  (cond
+    [(empty? vs) (error 'div-cs "division cannot handle 0 args")]
+    [(empty? (rest vs)) (div-c 1c (first vs))]
+    [else
+     (for/fold ([acc (first vs)])
+               ([v (in-list (rest vs))])
+       (div-c acc v))]))
