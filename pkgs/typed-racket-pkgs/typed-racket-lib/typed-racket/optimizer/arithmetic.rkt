@@ -124,28 +124,10 @@
             ([v (in-list vs)])
     (add-c acc v)))
 
-(define (sum-r vs)
-  (for/fold ([acc 0-])
-            ([v (in-list vs)])
-    (add-r acc v)))
-
 (define (sub-cs v vs)
   (for/fold ([acc v])
             ([v (in-list vs)])
     (sub-c acc v)))
-
-(define (sub-rs v vs)
-  (for/fold ([acc v])
-            ([v (in-list vs)])
-    (sub-r acc v)))
-
-(define (mult-rs vs)
-  (if (empty? vs)
-      (real #'1)
-      (for/fold ([acc (first vs)])
-                ([v (in-list (rest vs))])
-        (sub-r acc v))))
-
 
 (define (mult-cs vs)
   (if (empty? vs)
