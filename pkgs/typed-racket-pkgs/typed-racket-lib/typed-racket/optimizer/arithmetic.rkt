@@ -62,6 +62,13 @@
       (add-r (mult-r i1* r2*)
              (mult-r i2* r1*)))]))
 
+(define-syntax cond-c
+  (syntax-parser
+    [(_ [(~literal else) body:expr])
+     #'body]
+    [(_ [cond:expr body:expr] clause:expr ...)
+     #'(if-c cond body (cond-c clause ...))]))
+
 ;; a+bi / c+di -> syntax 
 ;; a,b,c,d are floats (!= exact 0)
 (define (complex-complex-/ binds a b c d)
@@ -73,25 +80,24 @@
     (c* (add-r (div-r b d) (mult-r c a))
         (sub-r (mult-r c b) (div-r a d))))
 
-  (define general-body
+  (define general-case
     (let* ([r (div-r c d)]
            [den (add-r d (mult-r c r))]
            [i (div-r (sub-r (mult-r b r) a) den)])
       (c* (div-r (add-r b (mult-r a r)) den) i)))
-  (define general-body-swapped
+  (define general-case-swapped
     (let* ([r (div-r d c)]
            [den (add-r c (mult-r d r))]
            [i (div-r (sub-r b (mult-r a r)) den)])
       (c* (div-r (add-r a (mult-r b r)) den) i)))
 
-  (define general-case
-    (if-c (<-r (abs-r c) (abs-r d))
-          general-body-swapped
-          general-body))
   (with-bindings binds
-    (if-c (zero?-r d) d=0-case
-          (if-c (zero?-r c) c=0-case
-                general-case))))
+    (cond-c
+      [(zero?-r d) d=0-case]
+      [(zero?-r c) c=0-case]
+      [(<-r (abs-r c) (abs-r d))
+       general-case-swapped]
+      [else general-case])))
 
 
 (define (div-c v1 v2)
