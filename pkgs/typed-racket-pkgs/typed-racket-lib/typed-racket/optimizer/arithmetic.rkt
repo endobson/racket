@@ -6,7 +6,7 @@
   racket/list
   racket/syntax
   racket/match
-  (for-syntax racket/base syntax/parse unstable/syntax racket/set)
+  (for-syntax racket/base racket/syntax syntax/parse unstable/syntax racket/set)
   (for-template racket/base racket/unsafe/ops))
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
@@ -47,20 +47,25 @@
         (sub-r r1 r2)
         (sub-r i1 i2))]))
 
+(define-syntax let*-c
+  (syntax-parser
+    [(_ ([names:id bound:expr] ...) body:expr)
+     (define/with-syntax (bindings ...) (generate-temporaries #'(names ...)))
+     #'(let*-values ([(bindings names) (save bound)] ...)
+         (with-bindings (append bindings ...)
+           body))]))
+
 
 
 (define (mult-c v1 v2)
   (match* (v1 v2)
     [((c binds1 r1 i1) (c binds2 r2 i2))
-     (define-values (r1-binds r1*) (save r1))
-     (define-values (i1-binds i1*) (save i1))
-     (define-values (r2-binds r2*) (save r2))
-     (define-values (i2-binds i2*) (save i2))
-     (c (append binds1 binds2 r1-binds i1-binds r2-binds i2-binds)
-      (sub-r (mult-r r1* r2*)
-             (mult-r i1* i2*))
-      (add-r (mult-r i1* r2*)
-             (mult-r i2* r1*)))]))
+     (with-bindings (append binds2 binds2)
+       (let*-c ([r1* r1] [i1* i1] [r2* r2] [i2* i2])
+         (c* (sub-r (mult-r r1* r2*)
+                    (mult-r i1* i2*))
+             (add-r (mult-r i1* r2*)
+                    (mult-r i2* r1*)))))]))
 
 (define-syntax cond-c
   (syntax-parser
