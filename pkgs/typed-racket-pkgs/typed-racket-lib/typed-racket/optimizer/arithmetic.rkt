@@ -15,6 +15,10 @@
 (struct non-zero-real (stx) #:transparent)
 (struct flonum (stx) #:transparent)
 
+(struct true ())
+(struct false ())
+(struct bool (stx))
+
 (define 0- (zero))
 (define complex c)
 
@@ -41,6 +45,12 @@
   (match v
     [(0:) #'0]
     [(real/flonum: stx) stx]))
+
+(define (safe-bool-stx v)
+  (match v
+    [(true) #'#t]
+    [(false) #'#f]
+    [(bool stx) stx]))
 
 (begin-for-syntax
 
@@ -167,9 +177,23 @@
 
 (define (zero?-r v)
   (match v
-    [(0:) #'#t]
-    [(flonum stx) #`(unsafe-fl= 0.0 #,stx)]
-    [_ #`(zero? #,(safe-stx v))]))
+    [(0:) (true)]
+    [(flonum stx) (bool #`(unsafe-fl= 0.0 #,stx))]
+    [_ (bool #`(zero? #,(safe-stx v)))]))
+
+#|
+(define (if0-r c t f)
+  (match c
+    [(0:) t]
+    [else
+      (define check
+        (match c
+          [(flonum stx) #`(unsafe-fl= 0.0 #,stx)]
+          [_ #`(zero? #,(safe-stx v))]))
+
+      (match* (t f)
+        [
+|#
 
 
 
@@ -247,9 +271,9 @@
           #,general-body))
 
   (wrap
-    #`(cond [#,(zero?-r d) #,d=0-case]
-            [#,(zero?-r c) #,c=0-case]
-            [else            #,general-case])))
+    #`(cond [#,(safe-bool-stx (zero?-r d)) #,d=0-case]
+            [#,(safe-bool-stx (zero?-r c)) #,c=0-case]
+            [else                          #,general-case])))
 
 (define (wrap v)
   (define/with-syntax (real imag) (generate-temporaries (list 'real 'imag)))
