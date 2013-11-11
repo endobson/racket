@@ -13,21 +13,23 @@
   sub-cs
   mult-cs
   div-cs
-  c
+  (rename-out
+    [c* complex]
+    [real-c* real-complex])
   complex->bindings
   non-zero-real
   real
-  flonum
-  0-)
+  flonum)
 
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
 (struct c (bindings real imag) #:transparent)
 
 (define (c* real imag) (c empty real imag))
+(define (real-c* real) (c empty real 0-))
 
-(define 0c (c* 0- 0-))
-(define 1c (c* (non-zero-real #'1) 0-))
+(define 0c (real-c* 0-))
+(define 1c (real-c* (non-zero-real #'1)))
 
 ;;;;;;;;;;;;;;;
 ;;; Helpers ;;;
