@@ -13,7 +13,7 @@ TR opt: unboxed-for.rkt 32:31 sum -- unbox float-complex
 TR opt: unboxed-for.rkt 32:31 sum -- unboxed complex variable
 TR opt: unboxed-for.rkt 32:31 sum -- unboxed complex variable
 TR opt: unboxed-for.rkt 32:31 sum -- unboxed var -> table
-TR opt: unboxed-for.rkt 32:53 0.0+0.0i -- unboxed literal
+TR opt: unboxed-for.rkt 32:53 0.0+0.0i -- unbox float-complex
 TR opt: unboxed-for.rkt 33:13 i -- unboxed complex variable
 TR opt: unboxed-for.rkt 33:13 i -- unboxed complex variable
 TR opt: unboxed-for.rkt 33:33 (quote (1.0+2.0i 2.0+4.0i)) -- in-list

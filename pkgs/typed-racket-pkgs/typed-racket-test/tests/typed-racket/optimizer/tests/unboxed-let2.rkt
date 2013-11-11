@@ -1,12 +1,12 @@
 #;#;
 #<<END
 TR opt: unboxed-let2.rkt 23:10 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex: addition
-TR opt: unboxed-let2.rkt 23:13 1.0+2.0i -- unboxed literal
-TR opt: unboxed-let2.rkt 23:22 2.0+4.0i -- unboxed literal
+TR opt: unboxed-let2.rkt 23:13 1.0+2.0i -- unbox float-complex
+TR opt: unboxed-let2.rkt 23:22 2.0+4.0i -- unbox float-complex
 TR opt: unboxed-let2.rkt 23:6 (t1 (+ 1.0+2.0i 2.0+4.0i)) -- unboxed let bindings
 TR opt: unboxed-let2.rkt 24:10 (+ 3.0+6.0i 4.0+8.0i) -- unboxed float complex: addition
-TR opt: unboxed-let2.rkt 24:13 3.0+6.0i -- unboxed literal
-TR opt: unboxed-let2.rkt 24:22 4.0+8.0i -- unboxed literal
+TR opt: unboxed-let2.rkt 24:13 3.0+6.0i -- unbox float-complex
+TR opt: unboxed-let2.rkt 24:22 4.0+8.0i -- unbox float-complex
 TR opt: unboxed-let2.rkt 24:6 (t2 (+ 3.0+6.0i 4.0+8.0i)) -- unboxed let bindings
 TR opt: unboxed-let2.rkt 25:2 (+ t1 t2) -- unboxed float complex: addition
 TR opt: unboxed-let2.rkt 25:5 t1 -- leave var unboxed

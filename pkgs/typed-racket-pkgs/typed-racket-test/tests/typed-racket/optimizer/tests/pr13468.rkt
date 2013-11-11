@@ -2,9 +2,9 @@
 #<<END
 TR missed opt: pr13468.rkt 66:5 (/ (ann 0.0+0.0i Float-Complex) (ann 1 Number)) -- Float-Complex division, potential exact 0s on the rhss -- caused by: 66:42 1
 TR missed opt: pr13468.rkt 69:5 (expt (ann -5.0 Flonum) (ann 2.0 Flonum)) -- unexpected complex type
-TR opt: pr13468.rkt 64:13 6.0+2.3i -- unboxed literal
+TR opt: pr13468.rkt 64:13 6.0+2.3i -- unbox float-complex
 TR opt: pr13468.rkt 64:5 (- (ann 6.0+2.3i Float-Complex)) -- unboxed float complex: subtraction
-TR opt: pr13468.rkt 65:13 6.0+2.3i -- unboxed literal
+TR opt: pr13468.rkt 65:13 6.0+2.3i -- unbox float-complex
 TR opt: pr13468.rkt 65:5 (/ (ann 6.0+2.3i Float-Complex)) -- unboxed float complex: division
 END
 #<<END

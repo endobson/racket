@@ -7,12 +7,12 @@ TR opt: let-loop-effects.rkt 40:0 (real-part (let: loop : Float-Complex ((x : Fl
 TR opt: let-loop-effects.rkt 41:2 (let: loop : Float-Complex ((x : Float-Complex 0.0+0.0i) (y : Integer 0) (z : Float-Complex 0.0+0.0i)) (if (zero? y) (+ 1.0+0.0i (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z))) (+ x z))) -- unbox float-complex
 TR opt: let-loop-effects.rkt 41:2 (let: loop : Float-Complex ((x : Float-Complex 0.0+0.0i) (y : Integer 0) (z : Float-Complex 0.0+0.0i)) (if (zero? y) (+ 1.0+0.0i (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z))) (+ x z))) -- unboxed call site
 TR opt: let-loop-effects.rkt 41:31 x -- unboxed var -> table
-TR opt: let-loop-effects.rkt 41:49 0.0+0.0i -- unboxed literal
+TR opt: let-loop-effects.rkt 41:49 0.0+0.0i -- unbox float-complex
 TR opt: let-loop-effects.rkt 41:8 loop -- fun -> unboxed fun
 TR opt: let-loop-effects.rkt 41:8 loop -- unboxed let loop
 TR opt: let-loop-effects.rkt 43:31 z -- unboxed var -> table
-TR opt: let-loop-effects.rkt 43:49 0.0+0.0i -- unboxed literal
-TR opt: let-loop-effects.rkt 45:11 1.0+0.0i -- unboxed literal
+TR opt: let-loop-effects.rkt 43:49 0.0+0.0i -- unbox float-complex
+TR opt: let-loop-effects.rkt 45:11 1.0+0.0i -- unbox float-complex
 TR opt: let-loop-effects.rkt 45:20 (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z)) -- call to fun with unboxed args
 TR opt: let-loop-effects.rkt 45:20 (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z)) -- unbox float-complex
 TR opt: let-loop-effects.rkt 45:20 (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z)) -- unboxed call site

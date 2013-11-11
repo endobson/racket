@@ -170,16 +170,6 @@
     #:with (bindings ...) #'())
 
   ;; else, do the unboxing here
-
-  ;; we can unbox literals right away
-  (pattern (quote n*:number)
-    #:do [(define n (syntax->datum #'n*))]
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed literal")]
-    #:with (bindings ...)
-      #`(((real-binding) '#,(real-part n))
-         ((imag-binding) '#,(imag-part n))))
-
   (pattern e:opt-expr
     #:with e* (generate-temporary)
     #:with (real-binding imag-binding) (binding-names)

@@ -2,7 +2,7 @@
 #<<END
 TR opt: make-polar.rkt 28:6 (make-polar 1.0 1.0) -- make-polar
 TR opt: make-polar.rkt 28:6 (make-polar 1.0 1.0) -- unboxed float complex: make-polar elimination
-TR opt: make-polar.rkt 31:12 1.0+2.0i -- unboxed literal
+TR opt: make-polar.rkt 31:12 1.0+2.0i -- unbox float-complex
 TR opt: make-polar.rkt 31:21 (make-polar 2.0 4.0) -- unboxed float complex: make-polar elimination
 TR opt: make-polar.rkt 31:6 (p (+ 1.0+2.0i (make-polar 2.0 4.0))) -- unboxed let bindings
 TR opt: make-polar.rkt 31:9 (+ 1.0+2.0i (make-polar 2.0 4.0)) -- unboxed float complex: addition
