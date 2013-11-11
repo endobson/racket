@@ -19,6 +19,8 @@
   <-r
   abs-r
   unchecked-sqrt-r
+  add1-r
+  sub1-r
   zero?-r
   exact-zero?-r
   nan?-r
@@ -382,3 +384,9 @@
 
 (define (values-r* bindings . args)
   (values-r bindings args))
+
+
+(define (add1-r n)
+  (add-r n 1r))
+(define (sub1-r n)
+  (sub1-r n 1r))
