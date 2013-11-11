@@ -13,6 +13,7 @@
   sub-cs
   mult-cs
   div-cs
+  conjugate-c
   (rename-out
     [c* complex]
     [real-c* real-complex])
@@ -83,6 +84,14 @@
        (real-stx r*)
        (real-stx i*))]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Unary implementations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (conjugate-c v)
+  (match v
+    [(c binds r i) 
+     (c binds r (negate-r i))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Binary implementations ;;;
@@ -141,6 +150,7 @@
            [(<-r (abs-r c) (abs-r d))
             general-case-swapped]
            [else general-case])))]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Variable Arity Implementations ;;;

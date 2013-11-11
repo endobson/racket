@@ -119,19 +119,23 @@
               [(imag-binding) (imag-part e*)])
     #:attr value (complex (constr #'real-binding) (constr #'imag-binding))))
 
-(define-syntax-class static-math-op
+(define-syntax-class variable-arity-math-op
   #:attributes (op name)
   (pattern _:+^ #:attr op add-cs  #:attr name "addition")
   (pattern _:-^ #:attr op sub-cs  #:attr name "subtraction")
   (pattern _:*^ #:attr op mult-cs #:attr name "multiplication")
   (pattern _:/^ #:attr op div-cs  #:attr name "division"))
 
+(define-syntax-class unary-math-op
+  #:attributes (op name)
+  (pattern _:conjugate^ #:attr op conjugate-c  #:attr name "conjugation"))
+
 
 (define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
-  (pattern (#%plain-app op:static-math-op cs:lifted-complex ...)
+  (pattern (#%plain-app op:variable-arity-math-op cs:lifted-complex ...)
     #:do [(log-unboxing-opt
             (string-append "unboxed float complex " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
@@ -139,14 +143,13 @@
     #:with (bindings ...)
       #`(cs.bindings ... ... math-bindings ...))
 
-
-  (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
-    #:with real-binding #'c.real-binding
-    #:with imag-binding (generate-temporary "unboxed-imag-")
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
+  (pattern (#%plain-app op:unary-math-op c:lifted-complex)
+    #:do [(log-unboxing-opt
+            (string-append "unboxed float complex " (attribute op.name)))]
+    #:with ((math-bindings ...) real-binding imag-binding)
+           (complex->bindings ((attribute op.op) (attribute c.value)))
     #:with (bindings ...)
-      #`(c.bindings ...
-         ((imag-binding) (unsafe-fl* -1.0 c.imag-binding))))
+      #`(c.bindings ... math-bindings ...))
 
 
   (pattern (#%plain-app op:exp^ c:unboxed-float-complex-opt-expr)
