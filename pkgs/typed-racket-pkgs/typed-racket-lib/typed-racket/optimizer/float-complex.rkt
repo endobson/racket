@@ -157,6 +157,13 @@
   (pattern _:conjugate^ #:attr op conjugate-c  #:attr name "conjugation")
   (pattern _:exp^ #:attr op exp-c  #:attr name "exponentiation"))
 
+;; we can eliminate boxing that was introduced by the user
+(define-syntax-class binary-real-math-op
+  #:attributes (op name)
+  (pattern _:make-rectangular^ #:attr op make-rectangular-c  #:attr name "make-rectangular elimination")
+  (pattern _:make-polar^ #:attr op make-polar-c  #:attr name "make-polar elimination"))
+
+
 
 (define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
@@ -164,7 +171,7 @@
 
   (pattern (#%plain-app op:variable-arity-math-op cs:lifted-complex ...)
     #:do [(log-unboxing-opt
-            (string-append "unboxed float complex " (attribute op.name)))]
+            (string-append "unboxed float complex: " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
       (complex->bindings ((attribute op.op) (attribute cs.value)))
     #:with (bindings ...)
@@ -172,27 +179,19 @@
 
   (pattern (#%plain-app op:unary-math-op c:lifted-complex)
     #:do [(log-unboxing-opt
-            (string-append "unboxed float complex " (attribute op.name)))]
+            (string-append "unboxed float complex: " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
       (complex->bindings ((attribute op.op) (attribute c.value)))
     #:with (bindings ...)
       #`(c.bindings ... math-bindings ...))
 
-
-  ;; we can eliminate boxing that was introduced by the user
-  (pattern (#%plain-app op:make-rectangular^ real:lifted-real imag:lifted-real)
-    #:do [(log-unboxing-opt "make-rectangular elimination")]
+  (pattern (#%plain-app op:binary-real-math-op real:lifted-real imag:lifted-real)
+    #:do [(log-unboxing-opt
+            (string-append "unboxed float complex: " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings (make-rectangular-c (attribute real.value) (attribute imag.value)))
+      (complex->bindings ((attribute op.op) (attribute real.value) (attribute imag.value)))
     #:with (bindings ...)
-      #'(real.bindings ... imag.bindings ...  math-bindings ...))
-
-  (pattern (#%plain-app op:make-polar^ r:lifted-real theta:lifted-real)
-    #:do [(log-unboxing-opt "make-polar elimination")]
-    #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings (make-polar-c (attribute r.value) (attribute theta.value)))
-    #:with (bindings ...)
-      #'(r.bindings ... theta.bindings ...  math-bindings ...))
+      #'(real.bindings ... imag.bindings ... math-bindings ...))
 
   ;; if we see a variable that's already unboxed, use the unboxed bindings
   (pattern :unboxed-var

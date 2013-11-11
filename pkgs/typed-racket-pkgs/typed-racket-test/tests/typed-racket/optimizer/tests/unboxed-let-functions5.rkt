@@ -1,6 +1,6 @@
 #;#;
 #<<END
-TR opt: unboxed-let-functions5.rkt 22:12 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex addition
+TR opt: unboxed-let-functions5.rkt 22:12 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex: addition
 TR opt: unboxed-let-functions5.rkt 22:15 1.0+2.0i -- unboxed literal
 TR opt: unboxed-let-functions5.rkt 22:24 2.0+4.0i -- unboxed literal
 END

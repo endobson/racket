@@ -6,7 +6,7 @@ TR opt: unboxed-let-constants-fail1.rkt 22:21 5.0+5.0i -- unboxed literal
 TR opt: unboxed-let-constants-fail1.rkt 23:40 x -- unboxed complex variable
 TR opt: unboxed-let-constants-fail1.rkt 24:16 ((z) x) -- unboxed let bindings
 TR opt: unboxed-let-constants-fail1.rkt 24:21 x -- leave var unboxed
-TR opt: unboxed-let-constants-fail1.rkt 25:13 (+ x z) -- unboxed float complex addition
+TR opt: unboxed-let-constants-fail1.rkt 25:13 (+ x z) -- unboxed float complex: addition
 TR opt: unboxed-let-constants-fail1.rkt 25:16 x -- leave var unboxed
 TR opt: unboxed-let-constants-fail1.rkt 25:18 z -- leave var unboxed
 TR opt: unboxed-let-constants-fail1.rkt 25:2 (real-part (+ x z)) -- complex accessor elimination

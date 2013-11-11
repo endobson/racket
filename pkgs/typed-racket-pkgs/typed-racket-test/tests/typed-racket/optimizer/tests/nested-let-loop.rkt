@@ -14,13 +14,13 @@ TR opt: nested-let-loop.rkt 45:38 0.0+0.0i -- unboxed literal
 TR opt: nested-let-loop.rkt 47:20 (loop1 (cdr x) (+ r s)) -- call to fun with unboxed args
 TR opt: nested-let-loop.rkt 47:20 (loop1 (cdr x) (+ r s)) -- unboxed call site
 TR opt: nested-let-loop.rkt 47:27 (cdr x) -- pair
-TR opt: nested-let-loop.rkt 47:35 (+ r s) -- unboxed float complex addition
+TR opt: nested-let-loop.rkt 47:35 (+ r s) -- unboxed float complex: addition
 TR opt: nested-let-loop.rkt 47:38 r -- leave var unboxed
 TR opt: nested-let-loop.rkt 47:40 s -- leave var unboxed
 TR opt: nested-let-loop.rkt 48:20 (loop2 (cdr y) (+ s (car x) (car y))) -- call to fun with unboxed args
 TR opt: nested-let-loop.rkt 48:20 (loop2 (cdr y) (+ s (car x) (car y))) -- unboxed call site
 TR opt: nested-let-loop.rkt 48:27 (cdr y) -- pair
-TR opt: nested-let-loop.rkt 48:35 (+ s (car x) (car y)) -- unboxed float complex addition
+TR opt: nested-let-loop.rkt 48:35 (+ s (car x) (car y)) -- unboxed float complex: addition
 TR opt: nested-let-loop.rkt 48:38 s -- leave var unboxed
 TR opt: nested-let-loop.rkt 48:40 (car x) -- pair
 TR opt: nested-let-loop.rkt 48:40 (car x) -- unbox float-complex

@@ -1,7 +1,7 @@
 #;#;
 #<<END
-TR opt: float-complex-conjugate-top.rkt 16:0 (conjugate (+ 1.0+2.0i 2.0+4.0i)) -- unboxed float complex conjugation
-TR opt: float-complex-conjugate-top.rkt 16:11 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex addition
+TR opt: float-complex-conjugate-top.rkt 16:0 (conjugate (+ 1.0+2.0i 2.0+4.0i)) -- unboxed float complex: conjugation
+TR opt: float-complex-conjugate-top.rkt 16:11 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex: addition
 TR opt: float-complex-conjugate-top.rkt 16:14 1.0+2.0i -- unboxed literal
 TR opt: float-complex-conjugate-top.rkt 16:23 2.0+4.0i -- unboxed literal
 END

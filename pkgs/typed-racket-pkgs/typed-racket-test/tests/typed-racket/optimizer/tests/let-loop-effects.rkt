@@ -18,13 +18,13 @@ TR opt: let-loop-effects.rkt 45:20 (loop (begin (displayln (quote x)) x) (begin 
 TR opt: let-loop-effects.rkt 45:20 (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z)) -- unboxed call site
 TR opt: let-loop-effects.rkt 45:26 (begin (displayln (quote x)) x) -- unbox float-complex
 TR opt: let-loop-effects.rkt 45:48 x -- unboxed complex variable
-TR opt: let-loop-effects.rkt 45:8 (+ 1.0+0.0i (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z))) -- unboxed float complex addition
+TR opt: let-loop-effects.rkt 45:8 (+ 1.0+0.0i (loop (begin (displayln (quote x)) x) (begin (displayln (quote y)) (add1 y)) (begin (displayln (quote z)) z))) -- unboxed float complex: addition
 TR opt: let-loop-effects.rkt 46:48 (add1 y) -- fixnum add1
 TR opt: let-loop-effects.rkt 47:26 (begin (displayln (quote z)) z) -- unbox float-complex
 TR opt: let-loop-effects.rkt 47:48 z -- unboxed complex variable
 TR opt: let-loop-effects.rkt 48:11 x -- leave var unboxed
 TR opt: let-loop-effects.rkt 48:13 z -- leave var unboxed
-TR opt: let-loop-effects.rkt 48:8 (+ x z) -- unboxed float complex addition
+TR opt: let-loop-effects.rkt 48:8 (+ x z) -- unboxed float complex: addition
 END
 #<<END
 x
