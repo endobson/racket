@@ -128,7 +128,8 @@
 
 (define-syntax-class unary-math-op
   #:attributes (op name)
-  (pattern _:conjugate^ #:attr op conjugate-c  #:attr name "conjugation"))
+  (pattern _:conjugate^ #:attr op conjugate-c  #:attr name "conjugation")
+  (pattern _:exp^ #:attr op exp-c  #:attr name "exponentiation"))
 
 
 (define-syntax-class actual-unboxed-float-complex-opt-expr
@@ -150,17 +151,6 @@
            (complex->bindings ((attribute op.op) (attribute c.value)))
     #:with (bindings ...)
       #`(c.bindings ... math-bindings ...))
-
-
-  (pattern (#%plain-app op:exp^ c:unboxed-float-complex-opt-expr)
-    #:with (real-binding imag-binding) (binding-names)
-    #:with scaling-factor (generate-temporary "unboxed-scaling-")
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...)
-      #`(c.bindings ...
-         ((scaling-factor) (unsafe-flexp c.real-binding))
-         ((real-binding) (unsafe-fl* (unsafe-flcos c.imag-binding) scaling-factor))
-         ((imag-binding) (unsafe-fl* (unsafe-flsin c.imag-binding) scaling-factor))))
 
 
   ;; we can eliminate boxing that was introduced by the user

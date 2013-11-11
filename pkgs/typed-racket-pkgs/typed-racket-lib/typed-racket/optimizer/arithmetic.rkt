@@ -14,6 +14,7 @@
   mult-cs
   div-cs
   conjugate-c
+  exp-c
   (rename-out
     [c* complex]
     [real-c* real-complex])
@@ -30,7 +31,7 @@
 (define (real-c* real) (c empty real 0r))
 
 (define 0c (real-c* 0r))
-(define 1c (real-c* (non-zero-real #'1)))
+(define 1c (real-c* 1r))
 
 ;;;;;;;;;;;;;;;
 ;;; Helpers ;;;
@@ -92,6 +93,14 @@
   (match v
     [(c binds r i) 
      (c binds r (negate-r i))]))
+
+(define (exp-c v)
+  (match v
+    [(c binds r i) 
+     (with-bindings binds
+       (mult-c (real-c* (exp-r r))
+               (c* (cos-r i) (sin-r i))))]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Binary implementations ;;;

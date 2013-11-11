@@ -2,11 +2,15 @@
 
 (provide 
   0r
+  1r
   add-r
   sub-r
   mult-r
   div-r
   negate-r
+  exp-r
+  cos-r
+  sin-r
   if-r
   <-r
   abs-r
@@ -203,6 +207,40 @@
      (non-zero-real #`(abs #,s))]
     [(real s)
      (real #`(abs #,s))]))
+
+(define (exp-r v)
+  (match v
+    [(0:) 1r]
+    [(1:) (flonum #'(exp 1))]
+    [(flonum s)
+     (flonum #`(unsafe-flexp #,s))]
+    [(non-zero-real s)
+     (non-zero-real #`(exp #,s))]
+    [(real s)
+     (non-zero-real #`(exp #,s))]))
+
+(define (cos-r v)
+  (match v
+    [(0:) 1r]
+    [(1:) (flonum #'(cos 1))]
+    [(flonum s)
+     (flonum #`(unsafe-flcos #,s))]
+    [(non-zero-real s)
+     (real #`(cos #,s))]
+    [(real s)
+     (real #`(cos #,s))]))
+
+(define (sin-r v)
+  (match v
+    [(0:) 0r]
+    [(1:) (flonum #'(sin 1))]
+    [(flonum s)
+     (flonum #`(unsafe-flsin #,s))]
+    [(non-zero-real s)
+     (real #`(sin #,s))]
+    [(real s)
+     (real #`(sin #,s))]))
+
 
 (define (<-r v1 v2)
   (match* (v1 v2)
