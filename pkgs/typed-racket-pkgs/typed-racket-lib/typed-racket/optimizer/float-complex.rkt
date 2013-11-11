@@ -119,51 +119,28 @@
               [(imag-binding) (imag-part e*)])
     #:attr value (c empty (constr #'real-binding) (constr #'imag-binding))))
 
+(define-syntax-class static-math-op
+  #:attributes (op name)
+  (pattern _:+^ #:attr op add-cs  #:attr name "addition")
+  (pattern _:-^ #:attr op sub-cs  #:attr name "subtraction")
+  (pattern _:*^ #:attr op mult-cs #:attr name "multiplication")
+  (pattern _:/^ #:attr op div-cs  #:attr name "division"))
 
 
 (define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
-  (pattern (#%plain-app op:+^ cs:lifted-complex ...)
+  (pattern (#%plain-app op:static-math-op cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed float complex addition")]
-    #:do [(define value (add-cs (attribute cs.value)))]
+    #:do [(log-unboxing-opt
+            (string-append "unboxed float complex " (attribute op.name)))]
+    #:do [(define value ((attribute op.op) (attribute cs.value)))]
     #:with (bindings ...)
       #`(cs.bindings ... ...
          #,@(c-bindings value)
          ((real-binding) #,(flonum-stx (c-real value)))
          ((imag-binding) #,(flonum-stx (c-imag value)))))
-
-  (pattern (#%plain-app op:-^ cs:lifted-complex ...)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed float complex subtraction")]
-    #:do [(define value (sub-cs (attribute cs.value)))]
-    #:with (bindings ...)
-      #`(cs.bindings ... ...
-         #,@(c-bindings value)
-         ((real-binding) #,(flonum-stx (c-real value)))
-         ((imag-binding) #,(flonum-stx (c-imag value)))))
-
-  (pattern (#%plain-app op:*^ cs:lifted-complex ...)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed float complex multiplication")]
-    #:do [(define value (mult-cs (attribute cs.value)))]
-    #:with (bindings ...)
-      #`(cs.bindings ... ...
-         #,@(c-bindings value)
-         [(real-binding) #,(flonum-stx (c-real value))]
-         [(imag-binding) #,(flonum-stx (c-imag value))]))
-
-  (pattern (#%plain-app op:/^ cs:lifted-complex ...)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(define value (div-cs (attribute cs.value)))]
-    #:do [(log-unboxing-opt "unboxed float complex division")]
-    #:with (bindings ...)
-      #`(cs.bindings ... ...
-         #,@(c-bindings value)
-         [(real-binding) #,(flonum-stx (c-real value))]
-         [(imag-binding) #,(flonum-stx (c-imag value))]))
 
 
   (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
