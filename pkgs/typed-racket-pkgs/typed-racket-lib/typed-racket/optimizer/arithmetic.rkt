@@ -17,6 +17,10 @@
 (define 0c (c* 0- 0-))
 (define 1c (c* (non-zero-real #'1) 0-))
 
+;;;;;;;;;;;;;;;
+;;; Helpers ;;;
+;;;;;;;;;;;;;;;
+
 (define (if-c cond t f)
   (match* (t f)
     [((c t-binds t-r t-i) (c f-binds f-r f-i))
@@ -50,8 +54,13 @@
     [(_ [cond:expr body:expr] clause:expr ...)
      #'(if-c cond body (cond-c clause ...))]))
 
+(define (fold-c f base vs)
+  (for/fold ([acc base])
+            ([v (in-list vs)])
+      (f acc v)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Actual implementations ;;;
+;;; Binary implementations ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (add-c v1 v2)
@@ -108,34 +117,26 @@
             general-case-swapped]
            [else general-case])))]))
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Variable Arity Implementations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (add-cs vs)
-  (for/fold ([acc 0c])
-            ([v (in-list vs)])
-    (add-c acc v)))
+  (fold-c add-c 0c vs))
 
 (define (sub-cs vs)
   (cond
     [(empty? vs) (error 'sub-cs "subtraction cannot handle 0 args")]
     [(empty? (rest vs)) (sub-c 0c (first vs))]
-    [else
-     (for/fold ([acc (first vs)])
-               ([v (in-list (rest vs))])
-       (sub-c acc v))]))
+    [else (fold-c sub-c (first vs) (rest vs))]))
 
 (define (mult-cs vs)
-  (if (empty? vs)
-      1c
-      (for/fold ([acc (first vs)])
-                ([v (in-list (rest vs))])
-        (mult-c acc v))))
+  (cond
+    [(empty? vs) 1c]
+    [else (fold-c mult-c (first vs) (rest vs))]))
 
 (define (div-cs vs)
   (cond
     [(empty? vs) (error 'div-cs "division cannot handle 0 args")]
     [(empty? (rest vs)) (div-c 1c (first vs))]
-    [else
-     (for/fold ([acc (first vs)])
-               ([v (in-list (rest vs))])
-       (div-c acc v))]))
+    [else (fold-c div-c (first vs) (rest vs))]))
