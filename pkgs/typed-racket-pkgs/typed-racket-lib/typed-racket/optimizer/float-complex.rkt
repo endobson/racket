@@ -51,6 +51,14 @@
       "This expression has a non-float Complex number type. "
       "The optimizer could optimize it better if it had type Float-Complex.")
     this-syntax))
+(define-syntax-rule (log-missed-float-expr)
+  (log-missed-optimization
+    "Non float value in float arithmetic"
+    (string-append
+      "This expression has a non Float type and thus cannot "
+      "be promoted to unboxed arithmetic.")
+    this-syntax))
+
 
 
 
@@ -84,6 +92,24 @@
     #:with (bindings ...) (list)
     #:with real-binding #f
     #:with imag-binding #f))
+
+
+(define-syntax-class lifted-real
+  #:attributes ([bindings 1] value)
+  (pattern (~and e:float-expr)
+    #:with e* (generate-temporary)
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (flonum #'e*))
+  (pattern (~and e:real-expr)
+    #:do [(log-missed-float-expr)
+          (log-unboxing-opt "non float in float ops")
+          (define constr
+            (if (possibly-contains-zero? #'e)
+                real
+                non-zero-real))]
+    #:with e* (generate-temporary 'real)
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (constr #'e*)))
 
 
 (define-syntax-class lifted-complex
@@ -140,7 +166,7 @@
     #:do [(log-unboxing-opt
             (string-append "unboxed float complex " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
-           (complex->bindings ((attribute op.op) (attribute cs.value)))
+      (complex->bindings ((attribute op.op) (attribute cs.value)))
     #:with (bindings ...)
       #`(cs.bindings ... ... math-bindings ...))
 
@@ -148,18 +174,19 @@
     #:do [(log-unboxing-opt
             (string-append "unboxed float complex " (attribute op.name)))]
     #:with ((math-bindings ...) real-binding imag-binding)
-           (complex->bindings ((attribute op.op) (attribute c.value)))
+      (complex->bindings ((attribute op.op) (attribute c.value)))
     #:with (bindings ...)
       #`(c.bindings ... math-bindings ...))
 
 
   ;; we can eliminate boxing that was introduced by the user
-  (pattern (#%plain-app op:make-rectangular^ real:float-arg-expr imag:float-arg-expr)
-    #:with (real-binding imag-binding) (binding-names)
+  (pattern (#%plain-app op:make-rectangular^ real:lifted-real imag:lifted-real)
     #:do [(log-unboxing-opt "make-rectangular elimination")]
+    #:with ((math-bindings ...) real-binding imag-binding)
+      (complex->bindings (complex (attribute real.value) (attribute imag.value)))
     #:with (bindings ...)
-      #'(((real-binding) real.opt)
-         ((imag-binding) imag.opt)))
+      #'(real.bindings ... imag.bindings ...  math-bindings ...))
+
   (pattern (#%plain-app op:make-polar^ r:float-arg-expr theta:float-arg-expr)
     #:with radius       (generate-temporary)
     #:with angle        (generate-temporary)
