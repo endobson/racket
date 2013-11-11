@@ -1,6 +1,5 @@
 #lang racket/base
 
-(provide (all-defined-out) (all-from-out "real-arithmetic.rkt"))
 (require
   "real-arithmetic.rkt"
   racket/list
@@ -8,6 +7,19 @@
   racket/match
   (for-syntax racket/base racket/syntax syntax/parse unstable/syntax racket/set)
   (for-template racket/base racket/unsafe/ops))
+
+(provide
+  add-cs
+  sub-cs
+  mult-cs
+  div-cs
+  c
+  complex->bindings
+  non-zero-real
+  real
+  flonum
+  0-)
+
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
 (struct c (bindings real imag) #:transparent)
