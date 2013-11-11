@@ -1,8 +1,12 @@
 #lang racket/base
 
 (provide 
+  ;; Values
   0r
   1r
+  nan-r
+  inf-r
+
   add-r
   sub-r
   mult-r
@@ -14,8 +18,13 @@
   if-r
   <-r
   abs-r
+  unchecked-sqrt-r
   zero?-r
+  exact-zero?-r
+  nan?-r
+  infinity?-r
   save-r
+  exact->inexact-r
 
   if-r/values
   (rename-out [values-r* values-r])
@@ -47,6 +56,8 @@
 
 (define 0r (zero))
 (define 1r (one))
+(define nan-r (flonum #'+nan.0))
+(define inf-r (flonum #'+inf.0))
 
 (struct values-r (bindings vals))
 
@@ -241,6 +252,19 @@
     [(real s)
      (real #`(sin #,s))]))
 
+;; Only valid on non negative values
+(define (unchecked-sqrt-r v)
+  (match v
+    [(0:) 0r]
+    [(1:) 1r]
+    [(flonum s)
+     (flonum #`(unsafe-flsqrt #,s))]
+    [(non-zero-real s)
+     (non-zero-real #`(sqrt #,s))]
+    [(real s)
+     (real #`(sqrt #,s))]))
+
+
 
 (define (<-r v1 v2)
   (match* (v1 v2)
@@ -257,6 +281,40 @@
     [(1:) (false)]
     [(flonum stx) (bool #`(unsafe-fl= 0.0 #,stx))]
     [_ (bool #`(zero? #,(safe-stx v)))]))
+
+(define (exact-zero?-r v)
+  (match v
+    [(0:) (true)]
+    [(1:) (false)]
+    [(flonum stx) (false)]
+    [(non-zero-real stx) (false)]
+    [(real stx) (bool #`(eq? 0 #,stx))]))
+
+
+(define (nan?-r v)
+  (match v
+    [(0:) (false)]
+    [(1:) (false)]
+    [(flonum stx) (bool #`(eq? +nan.0 #,stx))]
+    [_ (bool #`(nan? #,(safe-stx v)))]))
+
+(define (infinity?-r v)
+  (match v
+    [(0:) (false)]
+    [(1:) (false)]
+    [(flonum stx) (bool #`(eq? +inf.0 #,stx))]
+    [_ (bool #`(let ((val #,(safe-stx v)))
+                 (or (eq? val +inf.0)
+                     (eq? val +inf.f))))]))
+
+(define (exact->inexact-r v)
+  (match v
+    [(0:) (flonum #'0.0)]
+    [(1:) (flonum #'1.0)]
+    [(flonum _) v]
+    [(real/flonum: stx) (non-zero-real #`(exact->inexact #,stx))]))
+
+
 
 (define (if-stx c t f)
   #`(if #,c #,t #,f))

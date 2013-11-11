@@ -69,10 +69,10 @@
 
 (define-syntax cond-c
   (syntax-parser
-    [(_ [(~literal else) body:expr])
-     #'body]
-    [(_ [cond:expr body:expr] clause:expr ...)
-     #'(if-c cond body (cond-c clause ...))]))
+    [(_ [(~literal else) . body:expr])
+     #'(let () . body)]
+    [(_ [cond:expr . body:expr] clause:expr ...)
+     #'(if-c cond (let () . body) (cond-c clause ...))]))
 
 (define (fold-c f base vs)
   (for/fold ([acc base])
@@ -116,6 +116,35 @@
   (match v
     [(c binds r i)
      (c binds i 0r)]))
+
+(define (magnitude v)
+  (match v
+    [(c binds r* i*)
+     (with-bindings binds
+       (let*-c [(r (abs-r r*)) (i (abs-r i*))]
+         (cond-c
+           [(exact-zero?-r i) r]
+           [(exact-zero?-r r) i]
+           [else
+             (define body
+               (cond-c
+                 [(zero?-r r) (real-c* (exact->inexact-r i))]
+                 [(infinity?-r i) (real-c* (if-c (nan?-r r) nan-r inf-r))]
+                 [else
+                   (let*-c ([quot (div-r r i)])
+                      (mult-r i (unchecked-sqrt-r (add-r 1r (mult-r quot quot)))))]))
+             (define swapped-body
+               (cond-c
+                 [(zero?-r i) (real-c* (exact->inexact-r r))]
+                 [(infinity?-r r) (real-c* (if-c (nan?-r i) nan-r inf-r))]
+                 [else
+                   (let*-c ([quot (div-r i r)])
+                      (mult-r r (unchecked-sqrt-r (add-r 1r (mult-r quot quot)))))]))
+             (if-c (<-r i r)
+                   swapped-body
+                   body)])))]))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Binary implementations ;;;
