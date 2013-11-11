@@ -15,6 +15,8 @@
   div-cs
   conjugate-c
   exp-c
+  make-rectangular-c
+  make-polar-c
   (rename-out
     [c* complex]
     [real-c* real-complex])
@@ -84,6 +86,8 @@
        (append bindings r-binds i-binds)
        (real-stx r*)
        (real-stx i*))]))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unary implementations ;;;
@@ -184,3 +188,13 @@
     [(empty? vs) (error 'div-cs "division cannot handle 0 args")]
     [(empty? (rest vs)) (div-c 1c (first vs))]
     [else (fold-c div-c (first vs) (rest vs))]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Real/Complex Conversion Implementations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define make-rectangular-c c*)
+(define (make-polar-c r theta)
+  (let*-c ([t theta])
+    (mult-c (real-c* r) (c* (cos-r t) (sin-r t)))))
+

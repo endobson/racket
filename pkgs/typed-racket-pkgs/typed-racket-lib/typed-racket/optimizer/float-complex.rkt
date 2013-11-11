@@ -183,20 +183,16 @@
   (pattern (#%plain-app op:make-rectangular^ real:lifted-real imag:lifted-real)
     #:do [(log-unboxing-opt "make-rectangular elimination")]
     #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings (complex (attribute real.value) (attribute imag.value)))
+      (complex->bindings (make-rectangular-c (attribute real.value) (attribute imag.value)))
     #:with (bindings ...)
       #'(real.bindings ... imag.bindings ...  math-bindings ...))
 
-  (pattern (#%plain-app op:make-polar^ r:float-arg-expr theta:float-arg-expr)
-    #:with radius       (generate-temporary)
-    #:with angle        (generate-temporary)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "make-rectangular elimination")]
+  (pattern (#%plain-app op:make-polar^ r:lifted-real theta:lifted-real)
+    #:do [(log-unboxing-opt "make-polar elimination")]
+    #:with ((math-bindings ...) real-binding imag-binding)
+      (complex->bindings (make-polar-c (attribute r.value) (attribute theta.value)))
     #:with (bindings ...)
-      #'(((radius)       r.opt)
-         ((angle)        theta.opt)
-         ((real-binding) (unsafe-fl* radius (unsafe-flcos angle)))
-         ((imag-binding) (unsafe-fl* radius (unsafe-flsin angle)))))
+      #'(r.bindings ... theta.bindings ...  math-bindings ...))
 
   ;; if we see a variable that's already unboxed, use the unboxed bindings
   (pattern :unboxed-var
