@@ -163,35 +163,27 @@
   (pattern _:make-rectangular^ #:attr op make-rectangular-c  #:attr name "make-rectangular elimination")
   (pattern _:make-polar^ #:attr op make-polar-c  #:attr name "make-polar elimination"))
 
+(define-splicing-syntax-class static-math-op
+  #:attributes (name (bindings 1) value)
+  (pattern (~seq :variable-arity-math-op cs:lifted-complex ...)
+    #:attr value ((attribute op) (attribute cs.value))
+    #:with (bindings ...) #`(cs.bindings ... ...))
+  (pattern (~seq :unary-math-op c:lifted-complex)
+    #:attr value ((attribute op) (attribute c.value))
+    #:with (bindings ...) #'(c.bindings ...))
+  (pattern (~seq :binary-real-math-op v1:lifted-real v2:lifted-real)
+    #:attr value ((attribute op) (attribute v1.value) (attribute v2.value))
+    #:with (bindings ...) #'(v1.bindings ... v2.bindings ...)))
 
 
 (define-syntax-class actual-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
-  (pattern (#%plain-app op:variable-arity-math-op cs:lifted-complex ...)
-    #:do [(log-unboxing-opt
-            (string-append "unboxed float complex: " (attribute op.name)))]
-    #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings ((attribute op.op) (attribute cs.value)))
-    #:with (bindings ...)
-      #`(cs.bindings ... ... math-bindings ...))
-
-  (pattern (#%plain-app op:unary-math-op c:lifted-complex)
-    #:do [(log-unboxing-opt
-            (string-append "unboxed float complex: " (attribute op.name)))]
-    #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings ((attribute op.op) (attribute c.value)))
-    #:with (bindings ...)
-      #`(c.bindings ... math-bindings ...))
-
-  (pattern (#%plain-app op:binary-real-math-op real:lifted-real imag:lifted-real)
-    #:do [(log-unboxing-opt
-            (string-append "unboxed float complex: " (attribute op.name)))]
-    #:with ((math-bindings ...) real-binding imag-binding)
-      (complex->bindings ((attribute op.op) (attribute real.value) (attribute imag.value)))
-    #:with (bindings ...)
-      #'(real.bindings ... imag.bindings ... math-bindings ...))
+  (pattern (#%plain-app expr:static-math-op)
+    #:do [(log-unboxing-opt (string-append "unboxed float complex: " (attribute expr.name)))]
+    #:with ((math-bindings ...) real-binding imag-binding) (complex->bindings (attribute expr.value))
+    #:with (bindings ...) #`(expr.bindings ... math-bindings ...))
 
   ;; if we see a variable that's already unboxed, use the unboxed bindings
   (pattern :unboxed-var
