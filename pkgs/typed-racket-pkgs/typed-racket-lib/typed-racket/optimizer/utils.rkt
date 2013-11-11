@@ -118,6 +118,7 @@
      #'(begin
          (define-syntax-class name
            #:commit
+           #:attributes ()
            #:literals (literals ...)
            (pattern (~and op (~or literals ...))
                     #:do [(add-disappeared-use (syntax-local-introduce #'op))]))))))

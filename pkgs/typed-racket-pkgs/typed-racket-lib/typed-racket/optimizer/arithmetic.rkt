@@ -17,6 +17,8 @@
   exp-c
   make-rectangular-c
   make-polar-c
+  real-part-c
+  imag-part-c
   (rename-out
     [c* complex]
     [real-c* real-complex])
@@ -105,6 +107,15 @@
        (mult-c (real-c* (exp-r r))
                (c* (cos-r i) (sin-r i))))]))
 
+(define (real-part-c v)
+  (match v
+    [(c binds r i)
+     (c binds r 0r)]))
+
+(define (imag-part-c v)
+  (match v
+    [(c binds r i)
+     (c binds i 0r)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Binary implementations ;;;

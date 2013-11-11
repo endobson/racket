@@ -28,9 +28,9 @@
 (define-literal-syntax-class real-part^ (real-part flreal-part unsafe-flreal-part))
 (define-literal-syntax-class imag-part^ (imag-part flimag-part unsafe-flimag-part))
 (define-syntax-class projection^
-  #:attributes (selector)
-  (pattern :real-part^ #:attr selector (λ (real imag) real))
-  (pattern :imag-part^ #:attr selector (λ (real imag) imag)))
+  #:attributes (op)
+  (pattern :real-part^ #:attr op real-part-c)
+  (pattern :imag-part^ #:attr op imag-part-c))
 
 (define-merged-syntax-class float-complex-op (+^ -^ *^ /^ conjugate^ exp^))
 
@@ -251,9 +251,9 @@
           [(#%plain-app op:projection^ c:lifted-complex)
            (log-unboxing-opt "complex accessor elimination")
            (define/with-syntax ((math-bindings ...) real-binding imag-binding)
-             (complex->bindings (attribute c.value)))
+             (complex->bindings ((attribute op.op) (attribute c.value))))
            #`(let*-values (c.bindings ... math-bindings ...)
-               #,((attribute op.selector) #'real-binding #'imag-binding))])))
+               real-binding)])))
 
   (pattern (#%plain-app _:magnitude^ _:float-complex-expr)
     #:attr opt
