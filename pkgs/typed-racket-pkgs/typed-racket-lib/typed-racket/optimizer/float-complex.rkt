@@ -166,21 +166,6 @@
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
 
-  (pattern (#%plain-app op:/^ (~between cs:opt-expr 2 +inf.0) ...)
-    #:with (real-binding imag-binding) (binding-names)
-    #:with value (generate-temporary 'div-result)
-    #:do [(log-missed-optimization
-            "Non float complex values in complex division"
-            (string-append
-              "This expression has a FloatComplex type but complicated arguments thus cannot "
-              "be promoted to unboxed arithmetic.")
-            this-syntax)]
-    #:with (bindings ...)
-      #`([(value) (/ cs.opt ...)]
-         [(real-binding) (unsafe-flreal-part value)]
-         [(imag-binding) (unsafe-flimag-part value)]))
-
-
   (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
     #:with real-binding #'c.real-binding
     #:with imag-binding (generate-temporary "unboxed-imag-")
