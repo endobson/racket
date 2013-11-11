@@ -234,11 +234,11 @@
           (log-arity-raising-opt "call to fun with unboxed args")]
     #:with opt ((attribute call.opt-app) #'op))
 
-  (pattern :float-complex-arith-opt-expr))
+  (pattern :float-complex-arith-expr))
 
 ;; Supports not optimizing in order to support using it to check for optimizable expressions.
 ;; Thus side effects are hidden behind the optimizing argument and referencing the opt attribute.
-(define-syntax-class (float-complex-arith-expr* optimizing)
+(define-syntax-class float-complex-arith-expr
   #:commit
   #:attributes (opt)
 
@@ -314,7 +314,3 @@
                (#,op e.real-binding ... ...
                      e.imag-binding ... ...
                      e.boxed-binding ... ...))]))))
-
-
-(define-syntax-class/specialize float-complex-arith-opt-expr (float-complex-arith-expr* #t))
-(define-syntax-class/specialize float-complex-arith-expr (float-complex-arith-expr* #f))
