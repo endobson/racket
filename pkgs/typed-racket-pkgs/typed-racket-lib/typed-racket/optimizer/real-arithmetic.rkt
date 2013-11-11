@@ -32,6 +32,7 @@
 ;; Stx objects are side effect free, but may be expensive
 ;; so shouldn't be duplicated but reordering is fine
 (struct zero () #:transparent)
+(struct one () #:transparent)
 (struct real (stx) #:transparent)
 (struct non-zero-real (stx) #:transparent)
 (struct flonum (stx) #:transparent)
@@ -41,20 +42,18 @@
 (struct bool (stx))
 
 (define 0r (zero))
+(define 1r (one))
 
 (struct values-r (bindings vals))
 
 (define-match-expander 0:
   (syntax-parser [(_) #'(zero)]))
 
+(define-match-expander 1:
+  (syntax-parser [(_) #'(one)]))
+
 (define-match-expander values-r:
   (syntax-parser [(_ binds args) #'(values-r binds args)]))
-
-(define-match-expander flonum/coerce:
-  (syntax-parser
-    [(_ expr)
-     #'(or (flonum expr)
-           (non-zero-real (app (lambda (stx) #`(real->double-flonum #,stx)) expr)))]))
 
 (define-match-expander real/flonum:
   (syntax-parser
@@ -64,17 +63,21 @@
 (define-match-expander any-r:
   (syntax-parser
     [(_ expr)
-     #'(or (real expr) (non-zero-real expr) (flonum expr) (and (0:) (app safe-stx expr)))]))
+     #'(or (real expr) (non-zero-real expr) (flonum expr) 
+           (and (1:) (app safe-stx expr))
+           (and (0:) (app safe-stx expr)))]))
 
 
 (define (unsafe-stx v)
   (match v
+    [(1:) #'1.0]
     [(flonum stx) stx]
     [(non-zero-real stx) #`(real->double-flonum #,stx)]))
 
 (define (safe-stx v)
   (match v
     [(0:) #'0]
+    [(1:) #'1]
     [(real/flonum: stx) stx]))
 
 (define (safe-bool-stx v)
@@ -89,6 +92,8 @@
   (define-syntax-class number-type
     (pattern (~datum zero)
       #:with pattern #'(0:))
+    (pattern (~datum one)
+      #:with pattern #'(1:))
     (pattern (~datum flonum)
       #:with pattern #'(flonum _))
     (pattern (~datum real-not-zero)
@@ -150,35 +155,37 @@
   #:safe + #:unsafe unsafe-fl+
   [(zero) x => x]
   [x (zero) => x]
-  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(flonum) (flonum real-not-zero one) #:sym => #:unsafe]
   [(any) (any) #:sym => #:safe #:constructor flonum])
 
 (define-real-op sub-r
   #:safe - #:unsafe unsafe-fl-
   [(zero) x => (negate-r x)]
   [x (zero) => x]
-  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
+  [(flonum) (flonum real-not-zero one) #:sym => #:unsafe]
   [(any) (any) #:sym => #:safe #:constructor flonum])
 
 (define-real-op mult-r
   #:safe * #:unsafe unsafe-fl*
-  [(zero) x => 0r]
-  [x (zero) => 0r]
-  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
+  [x (zero) #:sym => 0r]
+  [x (one) #:sym => x]
+  [(flonum) (flonum real-not-zero one) #:sym => #:unsafe]
+  [(real-not-zero) (real-not-zero one) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
 
 (define-real-op div-r
   #:safe / #:unsafe unsafe-fl/
   [(zero) x => 0r]
-  [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
-  [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
+  [x (one) => 1r]
+  [(flonum) (flonum real-not-zero one) #:sym => #:unsafe]
+  [(real-not-zero) (real-not-zero one) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
 
 
 (define (negate-r v)
   (match v
-    [(zero) 0r]
+    [(0:) 0r]
+    [(1:) (non-zero-real #'-1)]
     [(flonum s)
      (flonum #`(unsafe-fl* -1.0 #,s))]
     [(non-zero-real s)
@@ -188,7 +195,8 @@
 
 (define (abs-r v)
   (match v
-    [(zero) (zero)]
+    [(0:) 0r]
+    [(1:) 1r]
     [(flonum s)
      (flonum #`(unsafe-flabs #,s))]
     [(non-zero-real s)
@@ -198,6 +206,8 @@
 
 (define (<-r v1 v2)
   (match* (v1 v2)
+    [((0:) (1:))
+     (true)]
     [((flonum s1) (flonum s2))
      (bool #`(unsafe-fl< #,s1 #,s2))]
     [(_ _)
@@ -206,6 +216,7 @@
 (define (zero?-r v)
   (match v
     [(0:) (true)]
+    [(1:) (false)]
     [(flonum stx) (bool #`(unsafe-fl= 0.0 #,stx))]
     [_ (bool #`(zero? #,(safe-stx v)))]))
 
@@ -217,10 +228,15 @@
 (define (merge-r v1 v2 stx)
   (match* (v1 v2)
     [((0:) (0:)) 0r]
+    [((1:) (1:)) 1r]
     [((flonum t-stx) (flonum f-stx)) (flonum stx)]
     [((non-zero-real t-stx) (flonum f-stx)) (non-zero-real stx)]
     [((flonum t-stx) (non-zero-real f-stx)) (non-zero-real stx)]
+    [((1:) (flonum f-stx)) (non-zero-real stx)]
+    [((flonum t-stx) (1:)) (non-zero-real stx)]
     [((non-zero-real t-stx) (non-zero-real f-stx)) (non-zero-real stx)]
+    [((1:) (non-zero-real f-stx)) (non-zero-real stx)]
+    [((non-zero-real t-stx) (1:)) (non-zero-real stx)]
     [((any-r: t-stx) (any-r: f-stx)) (real stx)]))
 
 
@@ -255,6 +271,8 @@
   (match r
     [(0:)
      (values empty 0r)]
+    [(1:)
+     (values empty 1r)]
     [(real/flonum: stx)
      (define/with-syntax binding (generate-temporary name))
      (define constructor
