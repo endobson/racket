@@ -125,40 +125,25 @@
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
-  ;; We let racket's optimizer handle optimization of 0.0s
   (pattern (#%plain-app op:+^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed float complex addition")]
+    #:do [(define value (add-cs (attribute cs.value)))]
     #:with (bindings ...)
       #`(cs.bindings ... ...
-         #,@(let ([value (add-cs (attribute cs.value))])
-              (append
-                (c-bindings value)
-                (list
-                  #`((real-binding) #,(flonum-stx (c-real value)))
-                  #`((imag-binding) #,(flonum-stx (c-imag value))))))))
-  (pattern (#%plain-app op:+^ :unboxed-float-complex-opt-expr)
-    #:do [(log-unboxing-opt "unboxed unary float complex")])
+         #,@(c-bindings value)
+         ((real-binding) #,(flonum-stx (c-real value)))
+         ((imag-binding) #,(flonum-stx (c-imag value)))))
 
-
-  (pattern (#%plain-app op:-^ (~between cs:lifted-complex 2 +inf.0) ...)
+  (pattern (#%plain-app op:-^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed binary float complex")]
+    #:do [(log-unboxing-opt "unboxed float complex subtraction")]
+    #:do [(define value (sub-cs (attribute cs.value)))]
     #:with (bindings ...)
       #`(cs.bindings ... ...
-         #,@(let ([value (sub-cs (attribute cs.value))])
-              (append
-                (c-bindings value)
-                (list
-                 #`((real-binding) #,(flonum-stx (c-real value)))
-                 #`((imag-binding) #,(flonum-stx (c-imag value))))))))
-  (pattern (#%plain-app op:-^ c1:unboxed-float-complex-opt-expr) ; unary -
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...)
-      #`(c1.bindings ...
-         [(real-binding) (unsafe-fl* -1.0 c1.real-binding)]
-         [(imag-binding) (unsafe-fl* -1.0 c1.imag-binding)]))
+         #,@(c-bindings value)
+         ((real-binding) #,(flonum-stx (c-real value)))
+         ((imag-binding) #,(flonum-stx (c-imag value)))))
 
   (pattern (#%plain-app op:*^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
@@ -170,25 +155,16 @@
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
-  (pattern (#%plain-app op:/^ (~between cs:lifted-complex 2 +inf.0) ...)
+  (pattern (#%plain-app op:/^ cs:lifted-complex ...)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(define value (div-cs (attribute cs.value)))]
-    #:do [(log-unboxing-opt "unboxed binary float complex")]
+    #:do [(log-unboxing-opt "unboxed float complex division")]
     #:with (bindings ...)
       #`(cs.bindings ... ...
          #,@(c-bindings value)
          [(real-binding) #,(flonum-stx (c-real value))]
          [(imag-binding) #,(flonum-stx (c-imag value))]))
 
-  (pattern (#%plain-app op:/^ c:lifted-complex) ; unary /
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(define value (div-cs (list (attribute c.value))))]
-    #:do [(log-unboxing-opt "unboxed unary float complex")]
-    #:with (bindings ...)
-      #`(c.bindings ...
-         #,@(c-bindings value)
-         [(real-binding) #,(flonum-stx (c-real value))]
-         [(imag-binding) #,(flonum-stx (c-imag value))]))
 
   (pattern (#%plain-app op:/^ (~between cs:opt-expr 2 +inf.0) ...)
     #:with (real-binding imag-binding) (binding-names)

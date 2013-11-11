@@ -4,7 +4,7 @@ TR opt: unboxed-let.rkt 27:11 (+ 1.0+2.0i 2.0+4.0i) -- unboxed float complex add
 TR opt: unboxed-let.rkt 27:14 1.0+2.0i -- unboxed literal
 TR opt: unboxed-let.rkt 27:23 2.0+4.0i -- unboxed literal
 TR opt: unboxed-let.rkt 27:7 (t1 (+ 1.0+2.0i 2.0+4.0i)) -- unboxed let bindings
-TR opt: unboxed-let.rkt 28:11 (- t1 3.0+6.0i) -- unboxed binary float complex
+TR opt: unboxed-let.rkt 28:11 (- t1 3.0+6.0i) -- unboxed float complex subtraction
 TR opt: unboxed-let.rkt 28:14 t1 -- leave var unboxed
 TR opt: unboxed-let.rkt 28:17 3.0+6.0i -- unboxed literal
 TR opt: unboxed-let.rkt 28:7 (t2 (- t1 3.0+6.0i)) -- unboxed let bindings
