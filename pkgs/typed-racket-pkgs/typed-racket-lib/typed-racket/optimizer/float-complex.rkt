@@ -63,36 +63,6 @@
 
 
 
-;; it's faster to take apart a complex number and use unsafe operations on
-;; its parts than it is to use generic operations
-;; we keep the real and imaginary parts unboxed as long as we stay within
-;; complex operations
-(define-syntax-class unboxed-float-complex-opt-expr
-  #:commit
-  #:attributes (real-binding imag-binding (bindings 1))
-
-  ;; The case when it is a float complex
-  (pattern (~and :float-complex-expr :actual-unboxed-float-complex-opt-expr))
-
-  ;; The following optimization is incorrect and causes bugs because it turns exact numbers into inexact
-  (pattern e:number-expr
-    #:with e* (generate-temporary)
-    #:with (real-binding imag-binding) (binding-names)
-    #:do [(log-missed-complex-expr)
-          (log-unboxing-opt
-            (if (subtypeof? #'e -Flonum)
-                "float in complex ops"
-                "non float complex in complex ops"))]
-    #:with (bindings ...)
-      #'(((e*) e.opt)
-         ((real-binding) (real->double-flonum (real-part e*)))
-         ((imag-binding) (real->double-flonum (imag-part e*)))))
-  (pattern e:expr
-    #:do [(error (format "non exhaustive pattern match ~a" #'e))]
-    #:with (bindings ...) (list)
-    #:with real-binding #f
-    #:with imag-binding #f))
-
 
 (define-syntax-class lifted-real
   #:attributes ([bindings 1] value)
@@ -114,7 +84,7 @@
 
 (define-syntax-class lifted-complex
   #:attributes ([bindings 1] value)
-  (pattern (~and _:float-complex-expr ~! :actual-unboxed-float-complex-opt-expr)
+  (pattern :unboxed-float-complex-opt-expr
     #:attr value (complex (flonum #'real-binding) (flonum #'imag-binding)))
   (pattern (~and e:float-expr)
     #:with e* (generate-temporary)
@@ -176,7 +146,16 @@
     #:with (bindings ...) #'(v1.bindings ... v2.bindings ...)))
 
 
-(define-syntax-class actual-unboxed-float-complex-opt-expr
+;; it's faster to take apart a complex number and use unsafe operations on
+;; its parts than it is to use generic operations
+;; we keep the real and imaginary parts unboxed as long as we stay within
+;; complex operations
+(define-syntax-class unboxed-float-complex-opt-expr
+  #:commit
+  #:attributes (real-binding imag-binding (bindings 1))
+  (pattern (~and :float-complex-expr :unchecked-unboxed-float-complex-opt-expr)))
+
+(define-syntax-class unchecked-unboxed-float-complex-opt-expr
   #:commit
   #:attributes (real-binding imag-binding (bindings 1))
 
@@ -193,7 +172,7 @@
   ;; else, do the unboxing here
 
   ;; we can unbox literals right away
-  (pattern (~and (quote n*:number) :float-complex-expr)
+  (pattern (quote n*:number)
     #:do [(define n (syntax->datum #'n*))]
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unboxed literal")]
@@ -201,7 +180,7 @@
       #`(((real-binding) '#,(real-part n))
          ((imag-binding) '#,(imag-part n))))
 
-  (pattern e:float-complex-expr
+  (pattern e:opt-expr
     #:with e* (generate-temporary)
     #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt "unbox float-complex")]
