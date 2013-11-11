@@ -29,7 +29,7 @@
 (define-literal-syntax-class imag-part^ (imag-part flimag-part unsafe-flimag-part))
 (define-merged-syntax-class projection^ (real-part^ imag-part^))
 
-(define-merged-syntax-class float-complex-op (+^ -^ *^ conjugate^ exp^))
+(define-merged-syntax-class float-complex-op (+^ -^ *^ /^ conjugate^ exp^))
 
 (define-syntax-class/specialize number-expr (subtyped-expr -Number))
 (define-syntax-class/specialize real-expr (subtyped-expr -Real))
@@ -281,37 +281,6 @@
 
   (pattern (#%plain-app op:float-complex-op e:expr ...)
     #:when (subtypeof? this-syntax -FloatComplex)
-    #:attr opt
-      (delay
-        (syntax-parse this-syntax
-          (exp:unboxed-float-complex-opt-expr
-           #'(let*-values (exp.bindings ...)
-               (unsafe-make-flrectangular exp.real-binding exp.imag-binding))))))
-
-  ;; division is special. can only optimize if none of the arguments can be exact 0.
-  ;; otherwise, optimization is unsound (we'd give a result where we're supposed to throw an error)
-  (pattern (#%plain-app op:/^ e:expr ...)
-    #:when (subtypeof? this-syntax -FloatComplex)
-    #:when (let ([irritants
-                  (for/list ([c (in-syntax #'(e ...))]
-                             #:when (match (type-of c)
-                                      [(tc-result1: t)
-                                       (subtype -Zero t)]
-                                      [_ #t]))
-                    c)])
-             (define safe-to-opt? (null? irritants))
-             ;; result is Float-Complex, but unsafe to optimize, missed optimization
-             (when (and optimizing (not safe-to-opt?))
-               (log-missed-optimization
-                "Float-Complex division, potential exact 0s on the rhss"
-                (string-append
-                 "This expression has a Float-Complex type, but cannot be safely unboxed. "
-                 "The second (and later) arguments could potentially be exact 0."
-                 (if (null? irritants)
-                     ""
-                     "\nTo fix, change the highlighted expression(s) to have Float (or Float-Complex) type(s)."))
-                this-syntax irritants))
-             safe-to-opt?)
     #:attr opt
       (delay
         (syntax-parse this-syntax
