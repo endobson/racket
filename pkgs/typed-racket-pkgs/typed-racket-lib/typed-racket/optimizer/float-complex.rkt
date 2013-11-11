@@ -27,7 +27,10 @@
 (define-literal-syntax-class make-rectangular^ (make-rectangular unsafe-make-flrectangular))
 (define-literal-syntax-class real-part^ (real-part flreal-part unsafe-flreal-part))
 (define-literal-syntax-class imag-part^ (imag-part flimag-part unsafe-flimag-part))
-(define-merged-syntax-class projection^ (real-part^ imag-part^))
+(define-syntax-class projection^
+  #:attributes (selector)
+  (pattern :real-part^ #:attr selector (λ (real imag) real))
+  (pattern :imag-part^ #:attr selector (λ (real imag) imag)))
 
 (define-merged-syntax-class float-complex-op (+^ -^ *^ /^ conjugate^ exp^))
 
@@ -245,14 +248,12 @@
     #:attr opt
       (delay
         (syntax-parse this-syntax
-          [(#%plain-app op:projection^ c:unboxed-float-complex-opt-expr)
+          [(#%plain-app op:projection^ c:lifted-complex)
            (log-unboxing-opt "complex accessor elimination")
-           #`(let*-values (c.bindings ...)
-               #,(if (or (free-identifier=? #'op #'real-part)
-                         (free-identifier=? #'op #'flreal-part)
-                         (free-identifier=? #'op #'unsafe-flreal-part))
-                     #'c.real-binding
-                     #'c.imag-binding))])))
+           (define/with-syntax ((math-bindings ...) real-binding imag-binding)
+             (complex->bindings (attribute c.value)))
+           #`(let*-values (c.bindings ... math-bindings ...)
+               #,((attribute op.selector) #'real-binding #'imag-binding))])))
 
   (pattern (#%plain-app _:magnitude^ _:float-complex-expr)
     #:attr opt
