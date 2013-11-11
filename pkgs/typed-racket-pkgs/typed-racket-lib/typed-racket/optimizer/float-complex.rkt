@@ -54,35 +54,7 @@
       "This expression has a non-float Complex number type. "
       "The optimizer could optimize it better if it had type Float-Complex.")
     this-syntax))
-(define-syntax-rule (log-missed-float-expr)
-  (log-missed-optimization
-    "Non float value in float arithmetic"
-    (string-append
-      "This expression has a non Float type and thus cannot "
-      "be promoted to unboxed arithmetic.")
-    this-syntax))
 
-
-
-
-
-
-(define-syntax-class lifted-real
-  #:attributes ([bindings 1] value)
-  (pattern (~and e:float-expr)
-    #:with e* (generate-temporary)
-    #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (flonum #'e*))
-  (pattern (~and e:real-expr)
-    #:do [(log-missed-float-expr)
-          (log-unboxing-opt "non float in float ops")
-          (define constr
-            (if (possibly-contains-zero? #'e)
-                real
-                non-zero-real))]
-    #:with e* (generate-temporary 'real)
-    #:with (bindings ...) #'([(e*) e.opt])
-    #:attr value (constr #'e*)))
 
 
 (define-syntax-class lifted-complex

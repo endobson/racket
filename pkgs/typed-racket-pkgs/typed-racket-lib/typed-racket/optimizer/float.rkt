@@ -1,14 +1,14 @@
 #lang racket/base
 
 (require syntax/parse unstable/sequence racket/dict racket/flonum racket/promise
-         syntax/parse/experimental/specialize
+         syntax/parse/experimental/specialize racket/syntax
          (for-template racket/base racket/flonum racket/unsafe/ops racket/math)
          "../utils/utils.rkt"
          (utils tc-utils)
          (types numeric-tower union abbrev)
-         (optimizer utils numeric-utils logging fixnum))
+         (optimizer utils numeric-utils logging fixnum real-arithmetic))
 
-(provide float-opt-expr float-arg-expr int-expr)
+(provide float-opt-expr float-arg-expr int-expr lifted-real)
 
 
 (define (mk-float-tbl generic)
@@ -55,6 +55,30 @@
 (define-syntax-class/specialize unary-float-op (float-op unary-float-ops))
 (define-syntax-class/specialize binary-float-op (float-op binary-float-ops))
 (define-syntax-class/specialize binary-float-comp (float-op binary-float-comps))
+
+(define-syntax-rule (log-missed-float-expr)
+  (log-missed-optimization
+    "Non float value in float arithmetic"
+    (string-append
+      "This expression has a non Float type and thus cannot "
+      "be promoted to unboxed arithmetic.")
+    this-syntax))
+
+(define-syntax-class lifted-real
+  #:attributes ([bindings 1] value)
+  (pattern (~and e:float-expr)
+    #:with e* (generate-temporary)
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (flonum #'e*))
+  (pattern (~and e:real-expr)
+    #:do [(log-missed-float-expr)
+          (define constr
+            (if (possibly-contains-zero? #'e)
+                real
+                non-zero-real))]
+    #:with e* (generate-temporary 'real)
+    #:with (bindings ...) #'([(e*) e.opt])
+    #:attr value (constr #'e*)))
 
 ;; if the result of an operation is of type float, its non float arguments
 ;; can be promoted, and we can use unsafe float operations
