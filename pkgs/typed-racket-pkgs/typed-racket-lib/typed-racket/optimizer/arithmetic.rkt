@@ -59,6 +59,17 @@
             ([v (in-list vs)])
       (f acc v)))
 
+(define (complex->bindings v)
+  (match v
+    [(c bindings r i)
+     (define-values (r-binds r*) (save r 'unboxed-real-))
+     (define-values (i-binds i*) (save i 'unboxed-imag-))
+     (list
+       (append bindings r-binds i-binds)
+       (safe-stx r*)
+       (safe-stx i*))]))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Binary implementations ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

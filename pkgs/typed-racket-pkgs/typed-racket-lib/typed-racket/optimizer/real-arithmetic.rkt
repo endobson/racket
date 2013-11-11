@@ -18,15 +18,14 @@
   values-r:
   
   ;; Should remove
+  safe-stx
   real
   non-zero-real
   flonum
   0:
   flonum?
   real?
-  non-zero-real?
-  flonum-stx
-  )
+  non-zero-real?)
 
 (require
   racket/list

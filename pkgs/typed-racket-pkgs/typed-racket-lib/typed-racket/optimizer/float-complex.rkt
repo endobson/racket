@@ -132,15 +132,12 @@
   #:attributes (real-binding imag-binding (bindings 1))
 
   (pattern (#%plain-app op:static-math-op cs:lifted-complex ...)
-    #:with (real-binding imag-binding) (binding-names)
     #:do [(log-unboxing-opt
             (string-append "unboxed float complex " (attribute op.name)))]
-    #:do [(define value ((attribute op.op) (attribute cs.value)))]
+    #:with ((math-bindings ...) real-binding imag-binding)
+           (complex->bindings ((attribute op.op) (attribute cs.value)))
     #:with (bindings ...)
-      #`(cs.bindings ... ...
-         #,@(c-bindings value)
-         ((real-binding) #,(flonum-stx (c-real value)))
-         ((imag-binding) #,(flonum-stx (c-imag value)))))
+      #`(cs.bindings ... ... math-bindings ...))
 
 
   (pattern (#%plain-app op:conjugate^ c:unboxed-float-complex-opt-expr)
