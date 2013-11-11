@@ -19,6 +19,7 @@
   make-polar-c
   real-part-c
   imag-part-c
+  magnitude-c
   (rename-out
     [c* complex]
     [real-c* real-complex])
@@ -117,29 +118,29 @@
     [(c binds r i)
      (c binds i 0r)]))
 
-(define (magnitude v)
+(define (magnitude-c v)
   (match v
     [(c binds r* i*)
      (with-bindings binds
        (let*-c [(r (abs-r r*)) (i (abs-r i*))]
          (cond-c
-           [(exact-zero?-r i) r]
-           [(exact-zero?-r r) i]
+           [(exact-zero?-r i) (real-c* r)]
+           [(exact-zero?-r r) (real-c* i)]
            [else
              (define body
                (cond-c
                  [(zero?-r r) (real-c* (exact->inexact-r i))]
-                 [(infinity?-r i) (real-c* (if-c (nan?-r r) nan-r inf-r))]
+                 [(infinity?-r i) (real-c* (if-r (nan?-r r) nan-r inf-r))]
                  [else
                    (let*-c ([quot (div-r r i)])
-                      (mult-r i (unchecked-sqrt-r (add-r 1r (mult-r quot quot)))))]))
+                     (real-c* (mult-r i (unchecked-sqrt-r (add-r 1r (mult-r quot quot))))))]))
              (define swapped-body
                (cond-c
                  [(zero?-r i) (real-c* (exact->inexact-r r))]
-                 [(infinity?-r r) (real-c* (if-c (nan?-r i) nan-r inf-r))]
+                 [(infinity?-r r) (real-c* (if-r (nan?-r i) nan-r inf-r))]
                  [else
                    (let*-c ([quot (div-r i r)])
-                      (mult-r r (unchecked-sqrt-r (add-r 1r (mult-r quot quot)))))]))
+                     (real-c* (mult-r r (unchecked-sqrt-r (add-r 1r (mult-r quot quot))))))]))
              (if-c (<-r i r)
                    swapped-body
                    body)])))]))
