@@ -26,9 +26,9 @@
 (struct c (bindings real imag) #:transparent)
 
 (define (c* real imag) (c empty real imag))
-(define (real-c* real) (c empty real 0-))
+(define (real-c* real) (c empty real 0r))
 
-(define 0c (real-c* 0-))
+(define 0c (real-c* 0r))
 (define 1c (real-c* (non-zero-real #'1)))
 
 ;;;;;;;;;;;;;;;
@@ -56,7 +56,7 @@
   (syntax-parser
     [(_ ([names:id bound:expr] ...) . body:expr)
      (define/with-syntax (bindings ...) (generate-temporaries #'(names ...)))
-     #'(let*-values ([(bindings names) (save bound 'names)] ...)
+     #'(let*-values ([(bindings names) (save-r bound 'names)] ...)
          (with-bindings (append bindings ...)
            . body))]))
 
@@ -76,12 +76,12 @@
 (define (complex->bindings v)
   (match v
     [(c bindings r i)
-     (define-values (r-binds r*) (save r 'unboxed-real-))
-     (define-values (i-binds i*) (save i 'unboxed-imag-))
+     (define-values (r-binds r*) (save-r r 'unboxed-real-))
+     (define-values (i-binds i*) (save-r i 'unboxed-imag-))
      (list
        (append bindings r-binds i-binds)
-       (safe-stx r*)
-       (safe-stx i*))]))
+       (real-stx r*)
+       (real-stx i*))]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

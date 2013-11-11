@@ -1,7 +1,7 @@
 #lang racket/base
 
 (provide 
-  0-
+  0r
   add-r
   sub-r
   mult-r
@@ -11,21 +11,16 @@
   <-r
   abs-r
   zero?-r
-  save
+  save-r
 
   if-r/values
   (rename-out [values-r* values-r])
   values-r:
   
-  ;; Should remove
-  safe-stx
+  (rename-out [safe-stx real-stx])
   real
   non-zero-real
-  flonum
-  0:
-  flonum?
-  real?
-  non-zero-real?)
+  flonum)
 
 (require
   racket/list
@@ -45,7 +40,7 @@
 (struct false ())
 (struct bool (stx))
 
-(define 0- (zero))
+(define 0r (zero))
 
 (struct values-r (bindings vals))
 
@@ -167,15 +162,15 @@
 
 (define-real-op mult-r
   #:safe * #:unsafe unsafe-fl*
-  [(zero) x => 0-]
-  [x (zero) => 0-]
+  [(zero) x => 0r]
+  [x (zero) => 0r]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
   [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
 
 (define-real-op div-r
   #:safe / #:unsafe unsafe-fl/
-  [(zero) x => 0-]
+  [(zero) x => 0r]
   [(flonum) (flonum real-not-zero) #:sym => #:unsafe]
   [(real-not-zero) (real-not-zero) #:sym => #:safe #:constructor non-zero-real]
   [(any) (any) #:sym => #:safe])
@@ -183,7 +178,7 @@
 
 (define (negate-r v)
   (match v
-    [(zero) 0-]
+    [(zero) 0r]
     [(flonum s)
      (flonum #`(unsafe-fl* -1.0 #,s))]
     [(non-zero-real s)
@@ -221,7 +216,7 @@
 ;; Stx must represent one or both of the two values in v1 and v2
 (define (merge-r v1 v2 stx)
   (match* (v1 v2)
-    [((0:) (0:)) 0-]
+    [((0:) (0:)) 0r]
     [((flonum t-stx) (flonum f-stx)) (flonum stx)]
     [((non-zero-real t-stx) (flonum f-stx)) (non-zero-real stx)]
     [((flonum t-stx) (non-zero-real f-stx)) (non-zero-real stx)]
@@ -256,10 +251,10 @@
                    (let*-values (#,@f-binds) (values #,@(map safe-stx f-args))))])
           (stx-map merge-r t-args f-args #'(vs ...)))])]))
 
-(define (save r [name 'saved])
+(define (save-r r [name 'saved])
   (match r
     [(0:)
-     (values empty 0-)]
+     (values empty 0r)]
     [(real/flonum: stx)
      (define/with-syntax binding (generate-temporary name))
      (define constructor
