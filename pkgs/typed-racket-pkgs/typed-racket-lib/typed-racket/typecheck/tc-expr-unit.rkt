@@ -246,7 +246,7 @@
       ;; application
       [(#%plain-app . _) (tc/app/check form expected)]
       ;; #%expression
-      [(#%expression _) (tc/expression form expected)]
+      [(#%expression _) (tc/#%expression form expected)]
       ;; syntax
       ;; for now, we ignore the rhs of macros
       [(letrec-syntaxes+values stxs vals . body)
@@ -410,17 +410,7 @@
       ;; top-level variable reference - occurs at top level
       [(#%top . id) (tc-id #'id)]
       ;; #%expression
-<<<<<<< HEAD
-      [((~and exp #%expression) e)
-       #:when (type-inst-property #'exp)
-       (do-inst (tc-expr #'e) (type-inst-property #'exp))]
-      [((~and exp #%expression) e)
-       #:when (type-ascription #'exp)
-       (tc-expr/check #'e (type-ascription #'exp))]
-      [(#%expression e) (tc-expr #'e)]
-=======
-      [(#%expression _) (tc/expression form #f)]
->>>>>>> Split out tc-expression to a separate file.
+      [(#%expression _) (tc/#%expression form #f)]
       ;; #%variable-reference
       [(#%variable-reference . _)
        (ret -Variable-Reference)]
