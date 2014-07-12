@@ -1,7 +1,7 @@
 #lang racket/load
 
 (module m1 typed/racket
-  (struct x ())
+  (struct: (A) x ((z : A)))
   (define: y : Struct-TypeTop struct:x)
   (provide struct:x y))
 

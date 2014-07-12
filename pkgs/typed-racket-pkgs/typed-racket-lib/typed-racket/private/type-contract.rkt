@@ -456,7 +456,7 @@
          (if (from-untyped? typed-side)
              (fail #:reason (~a "cannot import structure types from"
                                 "untyped code"))
-             (struct-type/sc null))]
+             (struct-type/sc (list (t->sc s))))]
         [(Syntax: (Base: 'Symbol _ _ _)) identifier?/sc]
         [(Syntax: t)
          (syntax/sc (t->sc t))]
