@@ -70,7 +70,7 @@
                                             (Row-vars-seen row)))
                                 rows)
                            esc)])
-      #`[(pred #,x) (let ([tmps (accs #,x)] ...) body)]))
+      #`[(pred #,x) (let/expression ([tmps (accs #,x)] ...) body)]))
   (cond
     [(eq? 'box k)
      (compile-con-pat (list #'unsafe-unbox*) #'box? (compose list Box-p))]
@@ -106,7 +106,7 @@
                                            esc)]
                                          [(n ...) ns])
                              #`[(#,arity)
-                                (let ([tmps (unsafe-vector-ref #,x n)] ...)
+                                (let/expression ([tmps (unsafe-vector-ref #,x n)] ...)
                                   body)]))))])
          #`[(vector? #,x)
             (case (unsafe-vector-length #,x)
@@ -375,7 +375,7 @@
                      [(parse-loop failkv fail-tail)
                       (generate-temporaries #'(parse-loop failkv fail-tail))])
          (with-syntax ([(rhs ...)
-                        #`[(let ([hid-arg (cons hid* hid-arg)] ...)
+                        #`[(let/expression ([hid-arg (cons hid* hid-arg)] ...)
                              (if maxrepconstraint
                                  (let ([rep (add1 rep)])
                                    (parse-loop x #,@hid-args #,@reps fail))

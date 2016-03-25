@@ -2,7 +2,7 @@
 
 (require "patterns.rkt" "compiler.rkt"
          syntax/stx syntax/parse racket/syntax
-         (for-template racket/base (only-in "runtime.rkt" match:error fail syntax-srclocs)))
+         (for-template racket/base (only-in "runtime.rkt" match:error fail syntax-srclocs scope)))
 
 (provide go go/one)
 
@@ -54,7 +54,7 @@
            (make-Row (for/list ([p (syntax->list pats)]) (parse p))
                      (syntax-property
                       (quasisyntax/loc stx
-                        (let () . #,rhs))
+                        (scope . #,rhs))
                       'feature-profile:pattern-matching 'antimark)
                      unm null))
          (syntax-parse rhs
@@ -68,7 +68,7 @@
              'match
              "expected at least one expression on the right-hand side after #:when clause"
              clause)]
-           [(#:when e rest ...) (mk #f #'((if e (let () rest ...) (fail))))]
+           [(#:when e rest ...) (mk #f #'((if e (scope rest ...) (fail))))]
            [(((~datum =>) unm) . rhs) (mk #'unm #'rhs)]
            [_ (mk #f rhs)])))
      (define/with-syntax body 

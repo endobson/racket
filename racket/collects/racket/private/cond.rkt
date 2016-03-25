@@ -67,14 +67,20 @@
                                                 (serror
                                                  "missing expressions in `else' clause"
                                                  line)
-                                                (list* (quote-syntax let-values) (quote-syntax ()) value))
+                                                (if (and (stx-pair? value)
+                                                         (stx-null? (stx-cdr value)))
+                                                    (stx-car value)
+                                                    (list* (quote-syntax let-values) (quote-syntax ()) value)))
                                             (if (stx-null? value)
                                                 (let ([gen (gen-temp-id 'c)])
                                                   `(,(quote-syntax let-values) ([(,gen) ,test])
                                                     (,(quote-syntax if) ,gen ,gen ,(loop rest #f))))
                                                 (list
                                                  (quote-syntax if) test
-                                                 (list* (quote-syntax let-values) (quote-syntax ()) value)
+                                                 (if (and (stx-pair? value)
+                                                          (stx-null? (stx-cdr value)))
+                                                     (stx-car value)
+                                                     (list* (quote-syntax let-values) (quote-syntax ()) value))
                                                  (loop rest #f))))))))))))
                 in-form)))])
       (values

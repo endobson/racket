@@ -10,7 +10,9 @@
          matchable?
          match-prompt-tag
          mlist? mlist->list
-         syntax-srclocs)
+         syntax-srclocs
+         let/expression
+         scope)
 
 (define match-prompt-tag (make-continuation-prompt-tag 'match)) 
 
@@ -66,3 +68,17 @@
                 (syntax-column stx)
                 (syntax-position stx)
                 (syntax-span stx))))
+
+;; let where the body is always an expression (not definition)
+;; This doesn't introduce an actual let when there are no bindings
+(define-syntax let/expression
+  (syntax-rules ()
+    [(let/expression () body) (#%expression body)]
+    [(let/expression bindings body) (let bindings (#%expression body))]))
+
+
+;; (scope . x) is like (let () . x), but it the case of only one body doesn't actually introduce a scope.
+(define-syntax scope
+  (syntax-rules ()
+    [(scope body) (#%expression body)]
+    [(scope . bodies) (let-values () . bodies)]))
